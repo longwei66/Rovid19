@@ -1,0 +1,65 @@
+---
+title: "Experimentation"
+output: html_document
+---
+
+
+csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+
+
+
+
+```{r}
+jhu_url <- paste("https://raw.githubusercontent.com/CSSEGISandData/", 
+  "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/", 
+  "time_series_19-covid-Confirmed.csv", sep = "")
+
+confirmed_long_jhu <- read_csv(jhu_url) %>%
+  rename(province = "Province/State", country_region = "Country/Region") %>%
+  pivot_longer(-c(province, country_region, Lat, Long), names_to = "Date", values_to = "cumulative_cases") %>%
+  mutate(Date = mdy(Date))
+
+fr_cases <- confirmed_long_jhu %>%
+  filter(country_region == "France")  %>% 
+  mutate(incident_cases = c(0, diff(cumulative_cases))) %>% 
+  ungroup() %>% select(-c(Lat, Long, cumulative_cases)) 
+it_cases <- confirmed_long_jhu %>%
+  filter(country_region == "Italy")  %>% 
+  mutate(incident_cases = c(0, diff(cumulative_cases))) %>% 
+  ungroup() %>% select(-c(Lat, Long, cumulative_cases)) 
+kr_cases <- confirmed_long_jhu %>%
+  filter(country_region == "South Korea")  %>% 
+  mutate(incident_cases = c(0, diff(cumulative_cases))) %>% 
+  ungroup() %>% select(-c(Lat, Long, cumulative_cases)) 
+
+all_cases <- rbind(it_cases,fr_cases,kr_cases)
+
+```
+
+
+
+
+
+```{r}
+g <- ggplot(data = fr_cases)
+g <- g + geom_bar(aes(x = Date, y = incident_cases), stat = "identity")
+g + ggtitle(label = "France")
+g <- ggplot(data = kr_cases)
+g <- g + geom_bar(aes(x = Date, y = incident_cases), stat = "identity")
+g + ggtitle(label = "South Korea")
+g <- ggplot(data = it_cases)
+g <- g + geom_bar(aes(x = Date, y = incident_cases), stat = "identity")
+g + ggtitle(label = "Italy")
+g <- ggplot(data = all_cases)
+g <- g + geom_bar(aes(x = Date, y = incident_cases, fill = country_region), stat = "identity")
+g <- g + facet_grid(facets = country_region ~ .)
+g  + ggtitle(label = "France + Korea + Italy")
+
+```
+
