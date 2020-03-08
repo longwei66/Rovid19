@@ -12,6 +12,9 @@ library(lubridate)
 ```
 
 
+# With JCH Data
+
+https://github.com/cedricguadalupe/FRANCE-COVID-19/blob/master/france_coronavirus_time_series-confirmed.csv
 
 
 
@@ -39,7 +42,6 @@ kr_cases <- confirmed_long_jhu %>%
   ungroup() %>% select(-c(Lat, Long, cumulative_cases)) 
 
 all_cases <- rbind(it_cases,fr_cases,kr_cases)
-
 ```
 
 
@@ -61,5 +63,33 @@ g <- g + geom_bar(aes(x = Date, y = incident_cases, fill = country_region), stat
 g <- g + facet_grid(facets = country_region ~ .)
 g  + ggtitle(label = "France + Korea + Italy")
 
+```
+
+
+## Another source
+
+```{r}
+git_fr_url <- "https://github.com/cedricguadalupe/FRANCE-COVID-19/raw/master/france_coronavirus_time_series-confirmed.csv"
+git_fr_url <- read_csv2(git_fr_url) 
+fr_new <- git_fr_url %>%
+  pivot_longer(-Date) %>%
+  rename(incident_cases = "value", province = "name") %>%
+  mutate(Date = lubridate::dmy(Date), country_region = "France") %>%
+  data.table::as.data.table()
+```
+```{r}
+g <- ggplot(data = fr_new[ province != "Total"])
+g <- g + geom_bar(aes(x = Date, y = incident_cases, fill = province), stat = "identity")
+g <- g + facet_wrap(facets = province ~ .)
+g  + ggtitle(label = "France by regions")
+
+
+```
+
+
+```{r}
+g <- ggplot(data = fr_new[ province == "Total"])
+g <- g + geom_bar(aes(x = Date, y = incident_cases, fill = province), stat = "identity")
+g  + ggtitle(label = "France global")
 ```
 
