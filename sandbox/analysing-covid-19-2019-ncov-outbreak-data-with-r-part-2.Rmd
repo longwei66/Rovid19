@@ -53,6 +53,7 @@ library(epitrix)
 library(projections)
 library(earlyR)
 library(distill)
+library(data.table)
 ```
 
 
@@ -1129,7 +1130,7 @@ Let's get the cum data by Region from a github repo (to be checked)
 
 ```{r}
 git_fr_url <- "https://github.com/cedricguadalupe/FRANCE-COVID-19/raw/master/france_coronavirus_time_series-confirmed.csv"
-fr_cum <- read_csv2(git_fr_url) 
+fr_cum <- read_csv2(git_fr_url)
 
 # We have missing data in some column, we will by latest known Value
 fr_cum <- fr_cum %>% fill(`Auvergne-Rhône-Alpes`)
@@ -1139,6 +1140,23 @@ fr_cum <- fr_cum  %>% fill(Occitanie)
 fr_cum <- fr_cum  %>% fill(`Pays de la Loire`)
 fr_cum <- fr_cum  %>% fill(`Provence-Alpes-Côte d'Azur`)
 complete.cases(fr_cum)
+```
+
+Some data are incorrect for Ile de France, let's fix.
+https://www.iledefrance.ars.sante.fr/coronavirus-covid-19-points-de-situation
+
+```{r ars_fix}
+fr_cum <- as.data.table(fr_cum)
+fr_cum[ Date == "05/03/2020", `Île-de-France` := 91 ]
+fr_cum[ Date == "06/03/2020", `Île-de-France` := 148 ]
+fr_cum[ Date == "07/03/2020", `Île-de-France` := 178 ]
+fr_cum[ Date == "09/03/2020", `Île-de-France` := 300 ]
+fr_cum[ Date == "09/03/2020", Total := 1412 ]
+```
+
+
+
+```{r}
 
 # Switch to long format
 fr_cum_long <- fr_cum %>%
@@ -1147,6 +1165,9 @@ fr_cum_long <- fr_cum %>%
     mutate(Date = lubridate::dmy(Date), country_region = "France", incident_cases = 0) %>%
     data.table::as.data.table()
 ```
+
+
+
 
 
 Now we compute the daily cases
@@ -1185,7 +1206,7 @@ french_regions_confirmed <- data.table::rbindlist(fr_daily)
 
 
 ```{r get_france_data, message=FALSE, warning=FALSE, tidy=TRUE}
-last_date_fr <- ymd("2020-03-07")
+last_date_fr <- ymd("2020-03-13")
 
 
 french_regions_confirmed %>%
@@ -1362,7 +1383,7 @@ alt_si_sd <- 3.4
 
 ```{r}
 region <- "Total"
-region_start_date <- ymd("2020-02-01")
+region_start_date <- ymd("2020-02-25")
 
 epicurve_fr(region)
 ```
@@ -1384,7 +1405,7 @@ plot_R_fr(region, region_start_date)
 
 ```{r}
 region <- "Île-de-France"
-region_start_date <- ymd("2020-02-16")
+region_start_date <- ymd("2020-02-26")
 
 epicurve_fr(region)
 ```
@@ -1406,7 +1427,7 @@ plot_R_fr(region, region_start_date)
 
 ```{r}
 region <- "Grand Est"
-region_start_date <- ymd("2020-02-16")
+region_start_date <- ymd("2020-02-26")
 
 epicurve_fr(region)
 ```
@@ -1430,7 +1451,7 @@ plot_R_fr(region, region_start_date)
 
 ```{r}
 region <- "Hauts-de-France"
-region_start_date <- ymd("2020-02-16")
+region_start_date <- ymd("2020-02-26")
 
 epicurve_fr(region)
 ```
@@ -1458,7 +1479,7 @@ plot_R_fr(region, region_start_date)
 
 ```{r get_italy_data_new1, message=FALSE, warning=FALSE, tidy=TRUE}
 
-last_date_it <- ymd("2020-03-07")
+last_date_it <- ymd("2020-03-13")
 
 # download the wikipedia web page
 # we use a specific version of the template page directly
