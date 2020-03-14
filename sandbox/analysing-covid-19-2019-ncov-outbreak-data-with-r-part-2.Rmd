@@ -67,6 +67,19 @@ alt_si_sd <- 3.4
 
 # Pre-amble
 
+## Hack by datapleth 
+
+This post is a modified version of the initial code by Tim Churches, France was
+added with a not so reliable source :
+
+Italy code was hacked to cope with recent data on wikipedia.
+Nevertheless, we should use now a better source :
+https://github.com/pcm-dpc/COVID-19
+
+
+## Initial pre-amble
+
+
 This post illustrates the use of R to track the incidence of COVID-19 in relevant countries, and applies various analyses to those data in an attempt to gauge the success of public health containment efforts in reducing the speed and degree of spread.
 
 It is a continuation of a [earlier post](https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/) containing a more detailed analysis of COVID-19 data for China, which was created as a teaching tool for [post-graduate health data science students](https://cbdrh.med.unsw.edu.au/postgraduate-coursework) to introduce them to tools and methods that can be used to track and analyse the spread of COVID-19, both in Australia and elsewhere.
