@@ -799,7 +799,7 @@ We'll repeat the analyses above for South Korea.
 
 ```{r get_korea_data, message=FALSE, warning=FALSE, tidy=TRUE}
 
-last_date_k <- ymd("2020-03-01")
+last_date_k <- ymd("2020-03-13")
 
 # download the wikipedia web page
 # we use a specific version of the template page directly
