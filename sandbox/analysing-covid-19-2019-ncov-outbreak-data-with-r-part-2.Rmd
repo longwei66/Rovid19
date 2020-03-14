@@ -1164,7 +1164,7 @@ fr_cum[ Date == "05/03/2020", `Île-de-France` := 91 ]
 fr_cum[ Date == "06/03/2020", `Île-de-France` := 148 ]
 fr_cum[ Date == "07/03/2020", `Île-de-France` := 178 ]
 fr_cum[ Date == "09/03/2020", `Île-de-France` := 300 ]
-fr_cum[ Date == "09/03/2020", Total := 1412 ]
+#fr_cum[ Date == "09/03/2020", Total := 1412 ]
 ```
 
 
@@ -1409,7 +1409,7 @@ lambda_plot_fr(region)
 plot_R_fr(region, region_start_date)
 ```
 
-**Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
 
 
 
@@ -1431,7 +1431,7 @@ lambda_plot_fr(region)
 plot_R_fr(region, region_start_date)
 ```
 
-**Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
 
 
 
@@ -1453,7 +1453,7 @@ lambda_plot_fr(region)
 plot_R_fr(region, region_start_date)
 ```
 
-**Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
 
 
 
@@ -1478,7 +1478,7 @@ plot_R_fr(region, region_start_date)
 ```
 
 **Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
-
+But we have a doubt on the source data.
 
 
 
@@ -1755,7 +1755,7 @@ lambda_plot_it(region)
 plot_R_it(region, region_start_date)
 ```
 
-**Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
+**Assessment**: The outbreak is not yet under control, but $R_{e}$ is consistently falling but still high (above 2.5).
 
 ### Veneto
 
@@ -1793,7 +1793,7 @@ lambda_plot_it(region)
 plot_R_it(region, region_start_date)
 ```
 
-**Assessment**: The outbreak is not yet under control, too early to say whether $R_{e}$ is consistently falling.
+**Assessment**: The outbreak is not yet under control, but $R_{e}$ is consistently falling.
 
 ### Piedmont
 
