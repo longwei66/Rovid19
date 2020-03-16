@@ -9,10 +9,9 @@ library(shadowtext)
 # [1] "Belgium"        "China"          "France"         "Germany"        "Iran"           "Italy"          "Japan"          "Korea, South"  
 # [9] "Netherlands"    "Norway"         "Spain"          "Sweden"         "Switzerland"    "United Kingdom" "US"             "33% daily rise"
 
+start_case <- 5 #600
 
-start_case <- 100 #600
-
-my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv") %>%
+my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv") %>%
     gather(date, cases, 5:ncol(.)) %>%
     mutate(date = as.Date(date, "%m/%d/%y")) %>%
     group_by(country = `Country/Region`, date) %>%
@@ -41,9 +40,14 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
         "France","Italy"
         , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
         , "33% daily rise" 
-        ))
-    
-    
+    ))
+
+# my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
+# my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
+ today <- data.frame(list(country = "France",date = as.Date("2020-03-16"), cases = 148, days_since_100 = 11, new_cases = 148))
+ my_df <- rbind(my_df, today)    
+
+
 my_df %>%
     # filter(days_since_100 <= 10) %>%
     ggplot(aes(days_since_100, cases, col = country)) +
@@ -64,3 +68,7 @@ my_df %>%
     scale_colour_manual(values = c("United Kingdom" = "#ce3140", "US" = "#EB5E8D", "Italy" = "black", "France" = "#208fce", "Germany" = "#c2b7af", "Hong Kong" = "#1E8FCC", "Iran" = "#9dbf57", "Japan" = "#208fce", "Singapore" = "#1E8FCC", "Korea, South" = "#208fce", "Belgium" = "#c2b7af", "Netherlands" = "#c2b7af", "Norway" = "#c2b7af", "Spain" = "#c2b7af", "Sweden" = "#c2b7af", "Switzerland" = "#c2b7af", "33% daily rise" = "#D9CCC3")) +
     geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
     labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases")
+
+
+
+

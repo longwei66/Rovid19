@@ -74,6 +74,8 @@ added with a not so reliable source :
 
 Italy code was hacked to cope with recent data on wikipedia.
 Nevertheless, we should use now a better source :
+http://opendatadpc.maps.arcgis.com/apps/opsdashboard/index.html#/b0c68bce2cce478eaac82fe38d4138b1
+with data from :
 https://github.com/pcm-dpc/COVID-19
 
 
