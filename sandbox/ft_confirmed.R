@@ -43,9 +43,9 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
         , "33% daily rise" 
         ))
     
-my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
-my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
-today <- data.frame(list(country = "France",date = as.Date("2020-03-16"), cases = 6633, days_since_100 = 16, new_cases = 6633))
+#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
+#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
+today <- data.frame(list(country = "France",date = as.Date("2020-03-17"), cases = 7733, days_since_100 = 17, new_cases = 6633))
 my_df <- rbind(my_df, today)    
 
 
