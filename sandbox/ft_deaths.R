@@ -9,7 +9,7 @@ library(shadowtext)
 # [1] "Belgium"        "China"          "France"         "Germany"        "Iran"           "Italy"          "Japan"          "Korea, South"  
 # [9] "Netherlands"    "Norway"         "Spain"          "Sweden"         "Switzerland"    "United Kingdom" "US"             "33% daily rise"
 
-start_case <- 5 #600
+start_case <- 10 #600
 
 my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
     gather(date, cases, 5:ncol(.)) %>%
@@ -44,8 +44,8 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
 
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
-#today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 372, days_since_100 = 14, new_cases = 148))
-#my_df <- rbind(my_df, today)    
+today <- data.frame(list(country = "France",date = as.Date("2020-03-26"), cases = 1696, days_since_100 = 19, new_cases = 1696))
+my_df <- rbind(my_df, today)    
 
 
 my_df %>%
