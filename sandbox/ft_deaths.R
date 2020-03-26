@@ -11,7 +11,7 @@ library(shadowtext)
 
 start_case <- 5 #600
 
-my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv") %>%
+my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
     gather(date, cases, 5:ncol(.)) %>%
     mutate(date = as.Date(date, "%m/%d/%y")) %>%
     group_by(country = `Country/Region`, date) %>%
@@ -29,7 +29,7 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
     filter(sum(cases >= start_case) >= 5) %>%
     filter(cases >= start_case) %>% 
     bind_rows(
-        tibble(country = "33% daily rise", days_since_100 = 0:18) %>%
+        tibble(country = "33% daily rise", days_since_100 = 0:25) %>%
             mutate(cases = start_case*1.33^days_since_100)
     ) %>%
     ungroup() %>%
@@ -44,15 +44,15 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
 
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
- today <- data.frame(list(country = "France",date = as.Date("2020-03-16"), cases = 148, days_since_100 = 11, new_cases = 148))
- my_df <- rbind(my_df, today)    
+#today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 372, days_since_100 = 14, new_cases = 148))
+#my_df <- rbind(my_df, today)    
 
 
 my_df %>%
     # filter(days_since_100 <= 10) %>%
     ggplot(aes(days_since_100, cases, col = country)) +
-    geom_hline(yintercept = 100) +
-    geom_vline(xintercept = 0) +
+    #geom_hline(yintercept = 10) +
+    #geom_vline(xintercept = 0) +
     geom_line(size = 0.8) +
     geom_point(pch = 21, size = 1) +
     scale_y_log10(expand = expand_scale(add = c(0,0.1)), breaks=c(100, 200, 500, 1000, 2000, 5000, 10000)) +

@@ -1141,14 +1141,352 @@ There are promising signs that spread may be slowing, but it is clear that South
 
 # France
 
+```{r}
+last_date_fr <- ymd("2020-03-24")
+```
 
-## Initia source
+
+## Open Data Source
+
+### Get & Clean DAta
+
+#### Get the data from opendatasoft.com
+
+```{r}
+#  Get data for France
+src_france <- "https://data.opendatasoft.com/explore/dataset/evolution-de-la-pandemie-de-covid-19-en-france@public/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
+france <- read.csv(file = src_france, sep = ";")
+
+head(france)
+
+```
+
+#### Reshape the data to fit later stages
+
+```{r}
+fr_cum0 <- france %>%
+  rename(
+    Region = "Nom.officiel"
+    , cumulative_cases = "Nombre.de.cas.confirmés"
+    , country_region = "Code.ISO.3166"
+  ) %>%
+  select(-Code.officiel, - Type.de.zone, -Centroide, -Source, -URL) %>%
+  mutate(
+    country_region = "France"
+    , Date = as.Date(Date)
+  )
+head(fr_cum0)
+```
+
+
+#### Add Total for France (a new region)
+
+```{r get_france_data, message=FALSE, warning=FALSE, tidy=TRUE}
+fr_cum0 %>%
+  group_by(Date) %>%
+  summarise(cumulative_cases=sum(cumulative_cases, na.rm=TRUE)) %>%
+  ungroup() %>%
+  mutate(  country_region = "France", Region = "Total") %>%
+  select(country_region, Region, Date, cumulative_cases )-> fr_cum0_t
+
+fr_cum0 <- rbind(fr_cum0, fr_cum0_t)
+
+fr_cum0 %>%
+  filter( Region == "Total") %>%
+  ggplot(aes(x=Date, y=cumulative_cases)) +
+  geom_bar(stat="identity") +
+  labs(y="Incident cases", 
+       title="COVID-19 incident cases in France (source 2)") +
+  theme(legend.position="top")
+```
+
+
+#### Let's have a look to cumulative_cases per region
+
+Warning, Y scales are different for each plot.
+
+```{r, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+fr_cum0 %>% 
+  group_by(Region) %>%
+  ggplot(aes(x=Date, y=cumulative_cases)) + 
+  geom_bar(stat="identity", fill="green") + 
+  facet_wrap(Region ~., ncol=3, scales = "free_y") + labs(y="Cumulative Cases - France per region",
+                                       title="Confirmed cases of COVID-19 in french regions",
+                                       subtitle="Note: differing y-axis scales") +
+  theme(legend.position = "none", 
+        strip.text.y = element_text(size=12)) -> fr
+print(fr)
+```
+
+
+
+
+#### Compute Incident cases (daily new cases)
+
+```{r}
+getDailyRegion <- function(region = NULL, df){
+  region_daily <- df %>%
+    arrange( cumulative_cases) %>%
+    filter(Region == region)  %>% 
+    mutate(incident_cases = c(0, diff(cumulative_cases)))
+  return(region_daily)
+}
+```
+
+
+Test the function for "Ile-de-France"
+
+```{r}
+total_fr_daily1 <- getDailyRegion(region = "Ile-de-France", df = fr_cum0)
+total_fr_daily1 %>%  ggplot(aes(x=Date, y=incident_cases)) +
+  geom_bar(stat="identity") +
+  labs(y="Incident cases", 
+       title="COVID-19 incident cases in Ile de France (source 1)") +
+  theme(legend.position="top")
+```
+
+
+Test the function for "Total"
+
+```{r}
+total_fr_daily1 <- getDailyRegion(region = "Total", df = fr_cum0)
+total_fr_daily1 %>%  ggplot(aes(x=Date, y=incident_cases)) +
+  geom_bar(stat="identity") +
+  labs(y="Incident cases", 
+       title="COVID-19 incident cases in France (source 1)") +
+  theme(legend.position="top")
+```
+
+Now we compute for all regions
+```{r}
+fr_daily0 <- lapply(unique(fr_cum0$Region), getDailyRegion, df = fr_cum0)
+french_regions_confirmed0 <- data.table::rbindlist(fr_daily0)
+```
+
+
+
+#### Let's have a look to cumulative_cases per region
+
+Warning, Y scales are different for each plot.
+
+```{r, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+french_regions_confirmed0 %>% 
+  group_by(Region) %>%
+  ggplot(aes(x=Date, y=incident_cases)) + 
+  geom_bar(stat="identity", fill="green") + 
+  facet_wrap(Region ~., ncol=3, scales = "free_y") + labs(y="Incident Cases - France per region",
+                                       title="Confirmed cases of COVID-19 in french regions",
+                                       subtitle="Note: differing y-axis scales") +
+  theme(legend.position = "none", 
+        strip.text.y = element_text(size=12)) -> fr
+print(fr)
+```
+
+
+### Analysis functions
+
+
+
+
+```{r Cori_model_get_data_fr0, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
+plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirmed0) {
+  
+  confirmed_cases_fr <- mydata %>%
+    filter(Date <= last_date_fr) %>% 
+    filter(Date >= region_start_date) %>% 
+    filter(Region == region) %>%
+    filter(!is.na(incident_cases)) %>%
+    select(Date, incident_cases) %>%
+    rename(dates=Date,
+           I=incident_cases)
+  
+  estimate_R_obj <- estimate_R(confirmed_cases_fr,
+                               method="uncertain_si",
+                               config = make_config(list(
+                                 mean_si = 7.5, std_mean_si = 2.0,
+                                 min_mean_si = 1, max_mean_si = 8.4,
+                                 std_si = 3.4, std_std_si = 1.0,
+                                 min_std_si = 0.5, max_std_si = 4.0,
+                                 n1 = 1000, n2 = 1000)))
+  
+  plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", region))
+}
+
+epicurve_fr <- function(region, mydata = french_regions_confirmed0) {
+  mydata %>%
+    filter(Region == region) %>%
+    group_by(Date) %>%
+    summarise(incident_cases=sum(incident_cases, na.rm=TRUE)) %>%
+    filter(Date <= last_date_fr) %>%
+    ggplot(aes(x=Date, y=incident_cases)) +
+    geom_bar(stat="identity") +
+    labs(y="Incident cases", 
+         title=paste("COVID-19 incident cases in", region)) +
+    theme(legend.position="top")
+}
+
+prefectural_earlyR <- function(df, region, last_date, si_mean, si_sd) {
+  df %>%
+    filter(Date <= last_date,
+           !is.na(incident_cases),
+           Region == region) %>%
+    select(Date, incident_cases) %>%
+    uncount(incident_cases) %>%
+    pull(Date) -> local_case_dates
+  
+  local_case_dates %>%
+    incidence(., last_date=last_date) -> local_cases
+  
+  res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
+  res$local_case_dates <- local_case_dates
+  res$city <- region
+  res$last_date <- last_date
+  res$si_mean <- si_mean
+  res$si_sd <- si_sd
+  return(res)
+}
+
+prefecture_plot_R <- function(res) {
+  plot(res, "R", main=paste("COVID-19 estimated R for", 
+                            res$region,
+                            "using data to",
+                            format(res$last_date, "%d %b %Y")),
+       sub=paste("(assuming serial interval mean =",
+                 res$si_mean, 
+                 ", sd =", 
+                 res$si_sd,")"),
+       bty="n")
+}
+
+prefecture_plot_lambda <- function(res) {
+  plot(res, "lambdas", scale = length(res$local_case_dates) + 1,
+       bty="n")
+  title(sub=paste("\nEstimated", expression(lambda), "for", 
+                  res$region, 
+                  "(assuming serial interval mean =",
+                  res$si_mean, 
+                  ", sd =", 
+                  res$si_sd, ")"))
+  abline(v = res$local_case_dates, lwd = 3, col = "grey")
+  abline(v = res$last_date, col = "blue", lty = 2, lwd = 2)
+  points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
+}
+
+lambda_plot_fr <- function(region, mydata = french_regions_confirmed0) {
+  res_obj <- prefectural_earlyR(mydata, 
+                                region, 
+                                last_date_fr,
+                                si_mean,
+                                si_sd)
+  
+  prefecture_plot_lambda(res_obj)
+}
+
+```
+
+
+
+```{r}
+si_mean <- 5.0
+si_sd <- 3.4
+alt_si_mean <- 7.5
+alt_si_sd <- 3.4
+```
+
+
+
+### Analysis - opendata source
+
+
+
+
+#### Total
+
+```{r}
+region <- "Total"
+region_start_date <- ymd("2020-02-25")
+
+epicurve_fr(region,mydata = french_regions_confirmed0[ Region == "Total"])
+```
+
+```{r}
+lambda_plot_fr(region, mydata = french_regions_confirmed0[ Region == "Total"])
+```
+
+```{r}
+plot_R_fr(region, region_start_date, mydata = french_regions_confirmed0[ Region == "Total"])
+```
+
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
+
+
+
+
+
+
+#### Ile-de-France
+
+```{r}
+region <- "Ile-de-France" #"Île-de-France"
+region_start_date <- ymd("2020-02-26")
+
+epicurve_fr(region, mydata = french_regions_confirmed0[ Region == "Ile-de-France"])
+```
+
+```{r}
+lambda_plot_fr(region,  mydata = french_regions_confirmed0[ Region == "Ile-de-France"])
+```
+
+```{r}
+plot_R_fr(region, region_start_date,  mydata = french_regions_confirmed0[ Region == "Ile-de-France"])
+```
+
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
+
+
+
+
+### Grand Est
+
+```{r}
+region <- "Grand Est"
+region_start_date <- ymd("2020-02-26")
+
+epicurve_fr(region, mydata = french_regions_confirmed0[ Region == "Grand Est"])
+```
+
+```{r}
+lambda_plot_fr(region,  mydata = french_regions_confirmed0[ Region == "Grand Est"])
+```
+
+```{r}
+plot_R_fr(region, region_start_date,  mydata = french_regions_confirmed0[ Region == "Grand Est"])
+```
+
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Initial source
 
 Let's get the cum data by Region from a github repo (to be checked)
 
 ```{r}
 git_fr_url <- "https://github.com/cedricguadalupe/FRANCE-COVID-19/raw/master/france_coronavirus_time_series-confirmed.csv"
-fr_cum1 <- read_csv2(git_fr_url)
+fr_cum1 <- read_csv(git_fr_url)
 
 # We have missing data in some column, we will by latest known Value
 fr_cum1 <- fr_cum1 %>% fill(`Auvergne-Rhône-Alpes`)
@@ -1256,8 +1594,9 @@ Now we compute for all regions
 ```{r}
 fr_daily1 <- lapply(unique(fr_cum_long1$Region), getDailyRegion, df = fr_cum_long1)
 french_regions_confirmed1 <- data.table::rbindlist(fr_daily1)
+```
 
-
+```{r}
 fr_daily <- lapply(unique(fr_cum_long$Region), getDailyRegion, df = fr_cum_long)
 french_regions_confirmed <- data.table::rbindlist(fr_daily)
 
@@ -1266,10 +1605,8 @@ french_regions_confirmed <- data.table::rbindlist(fr_daily)
 
 
 ```{r get_france_data, message=FALSE, warning=FALSE, tidy=TRUE}
-last_date_fr <- ymd("2020-03-17")
 
-
-french_regions_confirmed %>%
+french_regions_confirmed1 %>%
   filter(Region != "Total") %>%
   group_by(Date) %>%
   summarise(incident_cases=sum(incident_cases, na.rm=TRUE)) %>%
@@ -1289,7 +1626,7 @@ This does not match with total data, we assume that the dataset is not really cl
 Let's see the total cases by region.
 
 ```{r}
-french_regions_confirmed %>%
+french_regions_confirmed1 %>%
   filter(Region != "Total") %>%
   filter(Date <= last_date_fr) %>%
   group_by(Region) %>%
@@ -1309,14 +1646,14 @@ french_regions_confirmed %>%
 And the epidemic curves (daily incident case counts) for the top six regions.
 
 ```{r, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
-french_regions_confirmed %>% 
+french_regions_confirmed1 %>% 
   filter(Region != "Total") %>%
   group_by(Region) %>%
   summarise(total=sum(incident_cases, na.rm=TRUE)) %>%
   arrange(desc(total)) %>%
   pull(Region) -> french_regions_order
 
-fr <- french_regions_confirmed %>%
+fr <- french_regions_confirmed1 %>%
   filter(Date <= last_date_fr,
          Region %in% french_regions_order) %>%
   mutate(Region=ordered(Region, levels=french_regions_order)) %>%
@@ -1334,7 +1671,7 @@ print(fr)
 
 
 ```{r Cori_model_get_data_fr, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
-plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirmed) {
+plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirmed1) {
   
   confirmed_cases_fr <- mydata %>%
     filter(Date <= last_date_fr) %>% 
@@ -1357,7 +1694,7 @@ plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirm
   plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", region))
 }
 
-epicurve_fr <- function(region, mydata = french_regions_confirmed) {
+epicurve_fr <- function(region, mydata = french_regions_confirmed1) {
   mydata %>%
     filter(Region == region) %>%
     group_by(Date) %>%
@@ -1417,7 +1754,7 @@ prefecture_plot_lambda <- function(res) {
   points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
 }
 
-lambda_plot_fr <- function(region, mydata = french_regions_confirmed) {
+lambda_plot_fr <- function(region, mydata = french_regions_confirmed1) {
   res_obj <- prefectural_earlyR(mydata, 
                                 region, 
                                 last_date_fr,
@@ -1465,7 +1802,7 @@ plot_R_fr(region, region_start_date, mydata = total_fr_daily1)
 ### Île-de-France
 
 ```{r}
-region <- "Ile-de-France" #"Île-de-France"
+region <- "Île-de-France" #"Île-de-France"
 region_start_date <- ymd("2020-02-26")
 
 epicurve_fr(region)
@@ -1540,7 +1877,7 @@ But we have a doubt on the source data.
 
 ```{r get_italy_data_new1, message=FALSE, warning=FALSE, tidy=TRUE}
 
-last_date_it <- ymd("2020-03-17")
+last_date_it <- ymd("2020-03-23")
 
 # download the wikipedia web page
 # we use a specific version of the template page directly
