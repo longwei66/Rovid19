@@ -1142,7 +1142,7 @@ There are promising signs that spread may be slowing, but it is clear that South
 # France
 
 ```{r}
-last_date_fr <- ymd("2020-03-24")
+last_date_fr <- ymd("2020-03-25")
 ```
 
 
@@ -1404,7 +1404,7 @@ alt_si_sd <- 3.4
 
 ```{r}
 region <- "Total"
-region_start_date <- ymd("2020-02-25")
+region_start_date <- ymd("2020-02-16")
 
 epicurve_fr(region,mydata = french_regions_confirmed0[ Region == "Total"])
 ```
@@ -1873,6 +1873,206 @@ But we have a doubt on the source data.
 
 # Italy 
 
+## Alternative Source
+
+### Get Data (from github)
+
+```{r}
+italy <- read.csv(
+  file = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
+  , sep = ","
+  )
+head(italy)
+```
+
+```{r}
+italy <- data.table::as.data.table(italy)
+italy <- italy %>%
+  rename(
+    Date = data
+    , Region = denominazione_regione
+    , incident_cases = nuovi_attualmente_positivi
+    , cumulative_cases = totale_casi) %>%
+  mutate(Date = as.Date(Date)) %>%
+  mutate(country_region = "Italy") %>%
+  select(country_region, Date, Region, incident_cases, cumulative_cases)
+head(italy)
+```
+
+```{r}
+g <- ggplot(data = italy)
+g <- g + geom_bar(aes(x= Date, y = incident_cases), stat = "identity")
+g <- g + facet_wrap(facets = . ~ Region, scales = "free_y")
+g + ggtitle(label = "daily new cases")
+g <- ggplot(data = italy)
+g <- g + geom_bar(aes(x= Date, y = cumulative_cases), stat = "identity")
+g <- g + facet_wrap(facets = . ~ Region, scales = "free_y")
+g + ggtitle("Total cases")
+
+```
+
+
+### Add Total for Italy (a new region)
+
+```{r get_france_data, message=FALSE, warning=FALSE, tidy=TRUE}
+italy %>%
+  group_by(Date) %>%
+  summarise(
+    cumulative_cases=sum(cumulative_cases, na.rm=TRUE),
+    incident_cases=sum(incident_cases, na.rm=TRUE),
+    ) %>%
+  ungroup() %>%
+  mutate(  country_region = "Italy", Region = "Total") %>%
+  select(country_region, Region, Date, incident_cases, cumulative_cases )-> italy_t
+
+italy <- rbind(italy, italy_t)
+italy <- data.table::as.data.table(italy)
+
+italy %>%
+  filter( Region == "Total") %>%
+  ggplot(aes(x=Date, y=cumulative_cases)) +
+  geom_bar(stat="identity") +
+  labs(y="Incident cases", 
+       title="COVID-19 incident cases in Italy (source 2)") +
+  theme(legend.position="top")
+```
+
+
+
+
+### Cori model 2
+
+
+```{r Cori_model_get_data_it2, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
+plot_R_it <- function(region, region_start_date) {
+  
+  confirmed_cases_it <- italy %>%
+    filter(Date <= last_date_it) %>% 
+    filter(Date >= region_start_date) %>% 
+    filter(Region == region) %>%
+    filter(!is.na(incident_cases)) %>%
+    select(Date, incident_cases) %>%
+    rename(dates=Date,
+           I=incident_cases)
+  
+  estimate_R_obj <- estimate_R(confirmed_cases_it,
+                               method="uncertain_si",
+                               config = make_config(list(
+                                 mean_si = 7.5, std_mean_si = 2.0,
+                                 min_mean_si = 1, max_mean_si = 8.4,
+                                 std_si = 3.4, std_std_si = 1.0,
+                                 min_std_si = 0.5, max_std_si = 4.0,
+                                 n1 = 1000, n2 = 1000)))
+  
+  plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", region))
+}
+
+epicurve_it <- function(region) {
+  italy %>%
+    filter(Region == region) %>%
+    group_by(Date) %>%
+    summarise(incident_cases=sum(incident_cases, na.rm=TRUE)) %>%
+    filter(Date <= last_date_it) %>%
+    ggplot(aes(x=Date, y=incident_cases)) +
+    geom_bar(stat="identity") +
+    labs(y="Incident cases", 
+         title=paste("COVID-19 incident cases in", region)) +
+    theme(legend.position="top")
+}
+
+prefectural_earlyR <- function(df, region, last_date, si_mean, si_sd) {
+  df %>%
+    filter(Date <= last_date,
+           !is.na(incident_cases),
+           Region == region) %>%
+    select(Date, incident_cases) %>%
+    uncount(incident_cases) %>%
+    pull(Date) -> local_case_dates
+  
+  local_case_dates %>%
+    incidence(., last_date=last_date) -> local_cases
+  
+  res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
+  res$local_case_dates <- local_case_dates
+  res$city <- region
+  res$last_date <- last_date
+  res$si_mean <- si_mean
+  res$si_sd <- si_sd
+  return(res)
+}
+
+prefecture_plot_R <- function(res) {
+  plot(res, "R", main=paste("COVID-19 estimated R for", 
+                            res$region,
+                            "using data to",
+                            format(res$last_date, "%d %b %Y")),
+       sub=paste("(assuming serial interval mean =",
+                 res$si_mean, 
+                 ", sd =", 
+                 res$si_sd,")"),
+       bty="n")
+}
+
+prefecture_plot_lambda <- function(res) {
+  plot(res, "lambdas", scale = length(res$local_case_dates) + 1,
+       bty="n")
+  title(sub=paste("\nEstimated", expression(lambda), "for", 
+                  res$region, 
+                  "(assuming serial interval mean =",
+                  res$si_mean, 
+                  ", sd =", 
+                  res$si_sd, ")"))
+  abline(v = res$local_case_dates, lwd = 3, col = "grey")
+  abline(v = res$last_date, col = "blue", lty = 2, lwd = 2)
+  points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
+}
+
+lambda_plot_it <- function(region) {
+  res_obj <- prefectural_earlyR(italy, 
+                                region, 
+                                last_date_it,
+                                si_mean,
+                                si_sd)
+  
+  prefecture_plot_lambda(res_obj)
+}
+
+```
+
+
+
+## Analysis
+
+### Total
+
+```{r}
+region <- "Total"
+region_start_date <- ymd("2020-02-16")
+
+epicurve_fr(region,mydata = italy[ Region == "Total"])
+```
+
+```{r}
+lambda_plot_fr(region, mydata = italy[ Region == "Total"])
+```
+
+```{r}
+plot_R_fr(region, region_start_date, mydata = italy[ Region == "Total"])
+```
+
+**Assessment**: The outbreak is not yet under control,  $R_{e}$ is consistently falling but still high (above 3).
+
+
+
+
+
+
+
+
+
+
+
+
 ## Get Data
 
 ```{r get_italy_data_new1, message=FALSE, warning=FALSE, tidy=TRUE}
@@ -1882,10 +2082,10 @@ last_date_it <- ymd("2020-03-23")
 # download the wikipedia web page
 # we use a specific version of the template page directly
 # version of the wikipedia page that is used by this version of this document
-#italian_wikipedia_data_url <- "https://en.wikipedia.org/w/index.php?title=Template:2019–20_coronavirus_outbreak_data/Italy_medical_cases&oldid=943493968"
+italian_wikipedia_data_url <- "https://en.wikipedia.org/w/index.php?title=Template:2019–20_coronavirus_outbreak_data/Italy_medical_cases&oldid=943493968"
 
 
-italian_wikipedia_data_url <- "https://en.wikipedia.org/wiki/Template:2019–20_coronavirus_outbreak_data/Italy_medical_cases"
+#italian_wikipedia_data_url <- "https://en.wikipedia.org/wiki/Template:2019–20_coronavirus_outbreak_data/Italy_medical_cases"
 
 italian_outbreak_webpage <- read_html(italian_wikipedia_data_url)
 

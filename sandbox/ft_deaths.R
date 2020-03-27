@@ -4,6 +4,7 @@
 ## https://gist.githubusercontent.com/johnburnmurdoch/34bd7470dca92e470fd5f12a488923ce/raw/c7a66c8a718299ecfdb9b7c922daca5d33eb8aa0/coronavirus_cases_trajectories.R
 library(tidyverse)
 library(shadowtext)
+library(plotly)
 
 # unique(my_df$country)
 # [1] "Belgium"        "China"          "France"         "Germany"        "Iran"           "Italy"          "Japan"          "Korea, South"  
@@ -29,8 +30,16 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
     filter(sum(cases >= start_case) >= 5) %>%
     filter(cases >= start_case) %>% 
     bind_rows(
-        tibble(country = "33% daily rise", days_since_100 = 0:25) %>%
+        tibble(country = "33% daily rise", days_since_100 = 0:33) %>%
             mutate(cases = start_case*1.33^days_since_100)
+    ) %>%
+    bind_rows(
+        tibble(country = "25% daily rise", days_since_100 = 0:33) %>%
+            mutate(cases = start_case*1.25^days_since_100)
+    ) %>%
+    bind_rows(
+        tibble(country = "15% daily rise", days_since_100 = 0:33) %>%
+            mutate(cases = start_case*1.15^days_since_100)
     ) %>%
     ungroup() %>%
     mutate(
@@ -39,12 +48,12 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
     filter(country %in% c(
         "France","Italy"
         , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
-        , "33% daily rise" 
+        , "33% daily rise" , "25% daily rise", "15% daily rise"
     ))
 
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
-today <- data.frame(list(country = "France",date = as.Date("2020-03-26"), cases = 1696, days_since_100 = 19, new_cases = 1696))
+today <- data.frame(list(country = "France",date = as.Date("2020-03-27"), cases = 1995, days_since_100 = 20, new_cases = 1995))
 my_df <- rbind(my_df, today)    
 
 
@@ -65,9 +74,31 @@ my_df %>%
         plot.margin = margin(3,15,3,3,"mm")
     ) +
     coord_cartesian(clip = "off") +
-    scale_colour_manual(values = c("United Kingdom" = "#ce3140", "US" = "#EB5E8D", "Italy" = "black", "France" = "#208fce", "Germany" = "#c2b7af", "Hong Kong" = "#1E8FCC", "Iran" = "#9dbf57", "Japan" = "#208fce", "Singapore" = "#1E8FCC", "Korea, South" = "#208fce", "Belgium" = "#c2b7af", "Netherlands" = "#c2b7af", "Norway" = "#c2b7af", "Spain" = "#c2b7af", "Sweden" = "#c2b7af", "Switzerland" = "#c2b7af", "33% daily rise" = "#D9CCC3")) +
+    scale_colour_manual(values = c(
+        "United Kingdom" = "#ce3140"
+        , "US" = "#EB5E8D"
+        , "Italy" = "black"
+        , "France" = "#208fce"
+        , "Germany" = "#c2b7af"
+        , "Hong Kong" = "#1E8FCC"
+        , "Iran" = "#9dbf57"
+        , "Japan" = "#208fce"
+        , "Singapore" = "#1E8FCC"
+        , "Korea, South" = "#208fce"
+        , "Belgium" = "#c2b7af"
+        , "Netherlands" = "#c2b7af"
+        , "Norway" = "#c2b7af"
+        , "Spain" = "#c2b7af"
+        , "Sweden" = "#c2b7af"
+        , "Switzerland" = "#c2b7af"
+        , "33% daily rise" = "#D9CCC3"
+        , "25% daily rise" = "#D9CCC3"
+        , "15% daily rise" = "#D9CCC3"
+        )) +
     geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
-    labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases")
+    labs(x = "Number of days since 10th death", y = "", subtitle = "Total number of cases")  -> g
+
+ggplotly(g)
 
 
 

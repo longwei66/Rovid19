@@ -49,8 +49,8 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
     
 #my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 #my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
-#today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 10995, days_since_100 = 19, new_cases = 6633))
-#my_df <- rbind(my_df, today)    
+today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 32964, days_since_100 = 27, new_cases = 32964))
+my_df <- rbind(my_df, today)    
 
 
 my_df %>%
@@ -62,7 +62,7 @@ my_df %>%
     geom_point(pch = 21, size = 1) +
     scale_y_log10(
         expand = expand_scale(add = c(0,0.1))
-        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000)
+        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000)
         ) +
     # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
     scale_x_continuous(expand = expand_scale(add = c(0,1))) +
@@ -94,7 +94,7 @@ my_df %>%
         , "33% daily rise" = "#D9CCC3"
         )) +
     geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
-    labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases")
+    labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases") -> g
 
-
+ggplotly(g)
 
