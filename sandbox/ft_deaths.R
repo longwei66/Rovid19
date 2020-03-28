@@ -26,7 +26,7 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
     ungroup() %>%
     filter(is.finite(days_since_100)) %>% 
     group_by(country) %>%
-    mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
+    #mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
     filter(sum(cases >= start_case) >= 5) %>%
     filter(cases >= start_case) %>% 
     bind_rows(
