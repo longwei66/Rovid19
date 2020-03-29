@@ -1,12 +1,12 @@
 ---
-title: "Analysing COVID-19 (2019-nCoV) outbreak data with R - France"
+title: "Analysing COVID-19 (2019-nCoV) outbreak in France"
 draft: true
 description: "A further exploration of COVID-19 incidence data using R tools and packages."
 categories:
   - R
   - "COVID-19"
 author:
-  - name: datapleth
+  - name: Barthélémy Longueville for datapleth.io
 creative_commons: CC BY-SA
 twitter:
   creator: "@datapleth"
@@ -22,14 +22,15 @@ output:
 ---
 
 ```{r loadLibs, include=FALSE}
-library(dplyr)
+library(tidyverse)
 library(data.table)
 library(kableExtra)
 library(DT)
-library(ggplot2)
 library(RColorBrewer)
 library(plotly)
 library(patchwork)
+library(shadowtext)
+
 knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE) 
 ```
 
@@ -47,14 +48,228 @@ level.
 Visualisation and some elements of code are inspired by the best reference we
 found during this period :
 
-- John Burn-Murdoch ( )@jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
+- John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
 - Tim Churches with scientist at South Western Sydney Clinical School, UNSW Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, Australia. ( [link](https://swscs.med.unsw.edu.au) and his work [here](https://timchurches.github.io/blog/))
 
 This report is published under creative common CC BY-SA, 
 
-# France data  {.tabset}
 
-## Data Sources
+# France in the word {.tabset}
+
+Based on John Hopkings University data and visuals and code based from ft.com by  
+John Burn-Murdoch ( @jburnmurdoch )
+
+## Confirmed cases (cum)
+
+```{r ftConfirmed}
+## Total Number of Covid-19 cases per country, log scale, from 100+ plus
+## Original code from https://twitter.com/jburnmurdoch
+## Stories, stats & scatterplots for @FinancialTimes  john.burn-murdoch@ft.com | #dataviz
+## https://gist.githubusercontent.com/johnburnmurdoch/34bd7470dca92e470fd5f12a488923ce/raw/c7a66c8a718299ecfdb9b7c922daca5d33eb8aa0/coronavirus_cases_trajectories.R
+start_case <- 100 #600
+
+my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
+    gather(date, cases, 5:ncol(.)) %>%
+    mutate(date = as.Date(date, "%m/%d/%y")) %>%
+    group_by(country = `Country/Region`, date) %>%
+    summarise(cases = sum(cases)) %>%
+    filter(
+        country != "Others" &
+            #country != "Mainland China" &
+            country != "Cruise Ship"
+        ) %>%
+    bind_rows(
+        tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
+    ) %>%
+    group_by(country) %>%
+    mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
+    ungroup() %>%
+    filter(is.finite(days_since_100)) %>% 
+    group_by(country) %>%
+    mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
+    filter(sum(cases >= start_case) >= 5) %>%
+    filter(cases >= start_case) %>% 
+    bind_rows(
+        tibble(country = "33% daily rise", days_since_100 = 0:25) %>%
+            mutate(cases = start_case*1.33^days_since_100)
+    ) %>%
+    ungroup() %>%
+    mutate(
+        country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
+    ) %>%
+    filter(country %in% c(
+        "France","Italy", "China"
+        , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
+        , "33% daily rise" 
+        ))
+    
+#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
+#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
+#today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 32964, days_since_100 = 27, new_cases = 32964))
+#my_df <- rbind(my_df, today)    
+
+
+my_df %>%
+    # filter(days_since_100 <= 10) %>%
+    ggplot(aes(days_since_100, cases, col = country)) +
+    geom_hline(yintercept = 100) +
+    geom_vline(xintercept = 0) +
+    geom_line(size = 0.8) +
+    geom_point(pch = 21, size = 1) +
+    scale_y_log10(
+        expand = expand_scale(add = c(0,0.1))
+        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000)
+        ) +
+    # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
+    scale_x_continuous(expand = expand_scale(add = c(0,1))) +
+    theme_minimal() +
+    theme(
+        panel.grid.minor = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(3,15,3,3,"mm")
+    ) +
+    coord_cartesian(clip = "off") +
+    scale_colour_manual(values = c(
+        "China" = "#EB5E8D"
+        , "United Kingdom" = "#ce3140"
+        , "US" = "#EB5E8D"
+        , "Italy" = "black"
+        , "France" = "#208fce"
+        , "Germany" = "#c2b7af"
+        , "Hong Kong" = "#1E8FCC"
+        , "Iran" = "#9dbf57"
+        , "Japan" = "#208fce"
+        , "Singapore" = "#1E8FCC"
+        , "Korea, South" = "#208fce"
+        , "Belgium" = "#c2b7af"
+        , "Netherlands" = "#c2b7af"
+        , "Norway" = "#c2b7af"
+        , "Spain" = "#c2b7af"
+        , "Sweden" = "#c2b7af"
+        , "Switzerland" = "#c2b7af"
+        , "33% daily rise" = "#D9CCC3"
+        )) +
+    geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
+    labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases") -> g
+
+g
+```
+
+
+## Deaths (cum)
+
+
+```{r ftDeath}
+## Total Number of Covid-19 cases per country, log scale, from 100+ plus
+## Original code from https://twitter.com/jburnmurdoch
+## Stories, stats & scatterplots for @FinancialTimes  john.burn-murdoch@ft.com | #dataviz
+## https://gist.githubusercontent.com/johnburnmurdoch/34bd7470dca92e470fd5f12a488923ce/raw/c7a66c8a718299ecfdb9b7c922daca5d33eb8aa0/coronavirus_cases_trajectories.R
+
+
+start_case <- 10 #600
+
+my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
+    gather(date, cases, 5:ncol(.)) %>%
+    mutate(date = as.Date(date, "%m/%d/%y")) %>%
+    group_by(country = `Country/Region`, date) %>%
+    summarise(cases = sum(cases)) %>%
+    filter(country != "Others" & country != "Mainland China" & country != "Cruise Ship") %>%
+    bind_rows(
+        tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
+    ) %>%
+    group_by(country) %>%
+    mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
+    ungroup() %>%
+    filter(is.finite(days_since_100)) %>% 
+    group_by(country) %>%
+    #mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
+    filter(sum(cases >= start_case) >= 5) %>%
+    filter(cases >= start_case) %>% 
+    bind_rows(
+        tibble(country = "33% daily rise", days_since_100 = 0:33) %>%
+            mutate(cases = start_case*1.33^days_since_100)
+    ) %>%
+    bind_rows(
+        tibble(country = "25% daily rise", days_since_100 = 0:33) %>%
+            mutate(cases = start_case*1.25^days_since_100)
+    ) %>%
+    bind_rows(
+        tibble(country = "15% daily rise", days_since_100 = 0:33) %>%
+            mutate(cases = start_case*1.15^days_since_100)
+    ) %>%
+    ungroup() %>%
+    mutate(
+        country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
+    ) %>%
+    filter(country %in% c(
+        "France","Italy"
+        , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
+        , "33% daily rise" , "25% daily rise", "15% daily rise"
+    ))
+
+# my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
+# my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
+#today <- data.frame(list(country = "France",date = as.Date("2020-03-27"), cases = 1995, days_since_100 = 20, new_cases = 1995))
+#my_df <- rbind(my_df, today)    
+
+
+my_df %>%
+    # filter(days_since_100 <= 10) %>%
+    ggplot(aes(days_since_100, cases, col = country)) +
+    #geom_hline(yintercept = 10) +
+    #geom_vline(xintercept = 0) +
+    geom_line(size = 0.8) +
+    geom_point(pch = 21, size = 1) +
+    scale_y_log10(expand = expand_scale(add = c(0,0.1)), breaks=c(100, 200, 500, 1000, 2000, 5000, 10000)) +
+    # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
+    scale_x_continuous(expand = expand_scale(add = c(0,1))) +
+    theme_minimal() +
+    theme(
+        panel.grid.minor = element_blank(),
+        legend.position = "none",
+        plot.margin = margin(3,15,3,3,"mm")
+    ) +
+    coord_cartesian(clip = "off") +
+    scale_colour_manual(values = c(
+        "United Kingdom" = "#ce3140"
+        , "US" = "#EB5E8D"
+        , "Italy" = "black"
+        , "France" = "#208fce"
+        , "Germany" = "#c2b7af"
+        , "Hong Kong" = "#1E8FCC"
+        , "Iran" = "#9dbf57"
+        , "Japan" = "#208fce"
+        , "Singapore" = "#1E8FCC"
+        , "Korea, South" = "#208fce"
+        , "Belgium" = "#c2b7af"
+        , "Netherlands" = "#c2b7af"
+        , "Norway" = "#c2b7af"
+        , "Spain" = "#c2b7af"
+        , "Sweden" = "#c2b7af"
+        , "Switzerland" = "#c2b7af"
+        , "33% daily rise" = "#D9CCC3"
+        , "25% daily rise" = "#D9CCC3"
+        , "15% daily rise" = "#D9CCC3"
+        )) +
+    geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
+    labs(x = "Number of days since 10th death", y = "", subtitle = "Total number of cases")  -> g
+
+g
+```
+
+
+
+
+
+
+
+
+
+# France Official Data
+
+## Hospital data {.tabset .tabset-fade .tabset-pills} 
+
+### Data Sources
 
 Since Friday march 27th, French government is publishing data for hospital and
 health network.
@@ -80,28 +295,25 @@ From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-r
 > communiquera les anomalies aux services métiers.
 
 
-```{r sourceUri}
-france_official_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
-france_official_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
-
-france_official_hospital_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
-france_official_hospital_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
+```{r sourceUriHosp}
+france_official_hospital_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
+france_official_hospital_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
 
 france_region_departements_url <- "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
-
-opencovid_fr_url <- "https://raw.githubusercontent.com/opencovid19-fr/data/master/dist/chiffres-cles.csv"
 ```
 
 
-## Data Struture
+
+### Data Struture
 
 ```{r loadCleanFranceOfficialCodebook, echo=FALSE}
-france_official_codebook <- data.table::as.data.table(read.csv(file = france_official_codebook_url, sep = ";"))
-france_official_codebook %>%
-  rename(Feature = Colonne) %>%
-  mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_codebook
+france_official_hospital_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_codebook_url, sep = ";"))
 
-france_official_codebook %>%
+france_official_hospital_dep_codebook %>%
+  rename(Feature = Colonne) %>%
+  mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_hospital_dep_codebook
+
+france_official_hospital_dep_codebook %>%
   select(-Description_FR) %>%
   kable() %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -110,9 +322,9 @@ france_official_codebook %>%
 We import these data and merge associate department with their Region names
 
 ```{r}
-france_official_dep <- data.table::as.data.table(read.csv(file = france_official_url, sep = ";"))
+france_official_hospital_dep <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_url, sep = ";"))
 france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
-france_official_dep %>% 
+france_official_hospital_dep %>% 
   rename(
     department = dep
     , sex = sexe
@@ -124,29 +336,22 @@ france_official_dep %>%
   ) %>%
   mutate(
     date = as.Date(date)
-  )-> france_official_dep
-france_official_dep <- data.table::as.data.table(merge(
-  france_official_dep
+  )-> france_official_hospital_dep
+
+france_official_hospital_dep <- data.table::as.data.table(merge(
+  france_official_hospital_dep
   , france_region_departements
   , by.x = "department"
   , by.y = "num_dep"
 ))
 ```
 
-Complementary data with cumulative number of cases. This information
-is not present in hospital data.
-
-```{r}
-opencovid_fr <- read.csv(opencovid_fr_url)
-```
 
 
-
-
-## Data per department
+### Data per department
 
 ```{r viewHospitalDataPerDep}
-DT::datatable(france_official_dep
+DT::datatable(france_official_hospital_dep
               #, extensions = 'FixedColumns'
               , filter = 'top'
               , class = 'cell-border stripe'
@@ -157,12 +362,12 @@ DT::datatable(france_official_dep
 )
 ```
 
-## Data per regions
+### Data per regions
 
 We combine now department data per region.
 
 ```{r agregateHospPerRegion}
-france_official_dep %>%
+france_official_hospital_dep %>%
   group_by(region_name,sex,date) %>%
   summarise(
     hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
@@ -190,13 +395,201 @@ DT::datatable(france_official_reg
 
 
 
-# Visualise Hospital Data
+
+
+## Emergency Data {.tabset .tabset-fade .tabset-pills}
+
+This covers emergency GP ( SOS Medecins ) & Hospital Emergency Wards, per region and per department.
+
+### Data Sources
+
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+
+> Description du jeu de données
+> Quatre fichiers sont proposés :
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> département, sexe et tranche d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre total d’actes médicaux SOS Médecins pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins.
+
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> région, sexe et tranches d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins pour suspicion de COVID-19,
+> nombre d’actes médicaux SOS Médecins total. Le code région correspond au
+> code INSEE publié par l’INSEE sur www.data.gouv.fr.
+
+```{r sourceUriEmergency}
+france_official_emergency_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/eceb9fb4-3ebc-4da3-828d-f5939712600a"
+france_official_emergency_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/2265d880-5260-4b34-8827-b3d76180032e"
+
+france_official_emergency_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
+france_official_emergency_reg_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/02c99d99-96a0-4953-8e30-04fd660530f6"
+
+france_age_categories_url <- "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6"
+
+france_regions_url <- "https://data.opendatasoft.com/explore/dataset/contours-geographiques-tres-simplifies-des-regions-2019@ofgl-opendatamef/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
+
+```
+
+
+### Data Structure
+
+Dataset per departments :
+
+```{r loadCleanFranceOfficialERdepCodebook, echo=FALSE}
+france_official_emergency_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+mynames <- as.character(france_official_emergency_dep_codebook[1])
+setnames(france_official_emergency_dep_codebook, unlist(mynames))
+
+france_official_emergency_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Dataset per Regions :
+
+```{r loadCleanFranceOfficialERregCodebook, echo=FALSE}
+france_official_emergency_reg_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+mynames <- as.character(france_official_emergency_reg_codebook[1])
+setnames(france_official_emergency_reg_codebook, unlist(mynames))
+
+france_official_emergency_reg_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Age categories
+
+```{r getAgeCategories}
+france_age_categories <- data.table::as.data.table(read.csv(file = france_age_categories_url, sep = ";", header = T, stringsAsFactors = F))
+names(france_age_categories) <- c("category_code", "category_description")
+
+france_age_categories %>%
+  #select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+```
+
+
+
+
+### Data per department (extract)
+
+
+```{r}
+france_official_emergency_dep <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_url, sep = ","))
+france_official_emergency_dep %>%
+  mutate(date = as.Date(date_de_passage)) %>%
+  as.data.table()-> france_official_emergency_dep
+
+france_official_emergency_dep <- data.table::as.data.table(merge(
+  france_official_emergency_dep
+  , france_region_departements
+  , by.x = "dep"
+  , by.y = "num_dep"
+))
+```
+
+
+
+```{r viewHospitalDataPerERDep}
+DT::datatable(france_official_emergency_dep[1:100]
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+### Data per regions (extract)
+
+
+```{r}
+france_official_emergency_reg <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_url, sep = ","))
+
+
+regions <- as.data.table(read.csv(
+  file= france_regions_url
+  , sep = ";"))
+regions <- regions %>% 
+  mutate( code_insee = Code.INSEE, region_name = Nom.région) %>%
+  select(code_insee, region_name)
+
+france_official_emergency_reg <- merge(
+  x =france_official_emergency_reg
+  , y = regions
+  , by.x = "reg"
+  , by.y = "code_insee")
+```
+
+
+
+```{r viewHospitalDataERPerReg}
+DT::datatable(france_official_emergency_reg[1:100]
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
+
+
+## Covid positive cases {.tabset .tabset-face .tabset-pills}
+
+### Data sources
+
+```{r}
+opencovid_fr_url <- "https://raw.githubusercontent.com/opencovid19-fr/data/master/dist/chiffres-cles.csv"
+```
+
+
+Complementary data with cumulative number of cases. This information
+is not present in hospital data.
+
+```{r}
+opencovid_fr <- read.csv(opencovid_fr_url)
+```
+
+
+
+### Data Structure
+
+### Data per department
+
+### Data per regions
+
+
+
+# Analyse of Hospital Data
 
 
 ```{r smallMultipleHostpital}
 plotSmallMultipleCovid <- function(
   my_data = NULL
-  , mygenre = 0
   , myvariable = "death_cum"
   , colfeature = "region_name"
   , facetfeature = "dep_name"
@@ -207,7 +600,7 @@ plotSmallMultipleCovid <- function(
   nb_cols <- length(unique(my_data[[colfeature]]))
   mycolors <- colorRampPalette(brewer.pal(8, "Dark2"))(nb_cols)
   
-  my_data[ sex == 0 ] %>% 
+  my_data %>% 
     #group_by(department) %>%
     ggplot(
       aes_string(
@@ -262,8 +655,7 @@ plotSmallMultipleCovid <- function(
 
 ```{r plotHosp}
 h <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "hospitalized_now"
   , colfeature = "region_name"
 )
@@ -274,8 +666,7 @@ h
 
 ```{r plotHome}
 ho <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "back_home_now"
   , colfeature = "region_name"
 )
@@ -286,8 +677,7 @@ ho
 
 ```{r plotIcu}
 i <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "icu_now"
   , colfeature = "region_name"
 )
@@ -298,8 +688,7 @@ i
 
 ```{r plotDeath}
 g <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "death_cum"
   , colfeature = "region_name"
 )
@@ -308,33 +697,29 @@ g
 
 
 
-## Ile de France per department
+### Zoom : Ile de France
 
 ```{r plotIdf}
 idf_home <- plotSmallMultipleCovid(
-  my_data = france_official_dep[ region_name == "Île-de-France"]
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "back_home_now"
   , colfeature = "department"
   , ncol = 3
 )
 idf_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_dep[ region_name == "Île-de-France"]
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "hospitalized_now"
   , colfeature = "department"
   , ncol = 3
 )
 idf_dead <- plotSmallMultipleCovid(
-  my_data = france_official_dep[ region_name == "Île-de-France"]
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "death_cum"
   , colfeature = "department"
   , ncol = 3
 )
 idf_icu <- plotSmallMultipleCovid(
-  my_data = france_official_dep[ region_name == "Île-de-France"]
-  , mygenre = 0
+  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "icu_now"
   , colfeature = "department"
   , ncol = 3
@@ -354,8 +739,7 @@ idf_icu <- plotSmallMultipleCovid(
 
 ```{r plotHospR}
 h <- plotSmallMultipleCovid(
-  my_data = france_official_reg
-  , mygenre = 0
+  my_data = france_official_reg[ sex == 0 ]
   , myvariable = "hospitalized_now"
   , colfeature = "region_name"
   , facetfeature = "region_name"
@@ -368,8 +752,7 @@ h
 
 ```{r plotHomeR}
 ho <- plotSmallMultipleCovid(
-  my_data = france_official_reg
-  , mygenre = 0
+  my_data = france_official_reg[ sex == 0 ]
   , myvariable = "back_home_now"
   , colfeature = "region_name"
   , facetfeature = "region_name"
@@ -382,8 +765,7 @@ ho
 
 ```{r plotIcuR}
 i <- plotSmallMultipleCovid(
-  my_data = france_official_reg
-  , mygenre = 0
+  my_data = france_official_reg[ sex == 0 ]
   , myvariable = "icu_now"
   , colfeature = "region_name"
   , facetfeature = "region_name"
@@ -396,8 +778,7 @@ i
 
 ```{r plotDeathR}
 g <- plotSmallMultipleCovid(
-  my_data = france_official_reg
-  , mygenre = 0
+  my_data = france_official_reg[ sex == 0 ]
   , myvariable = "death_cum"
   , colfeature = "region_name"
   , facetfeature = "region_name"
@@ -536,7 +917,7 @@ plotLogGrowth <- function(
 ### Per departments
 
 ```{r logWorstDep}
-my_df <- france_official_dep[ 
+my_df <- france_official_hospital_dep[ 
   #region_name == "Île-de-France" &
   sex == 0
   ] 
@@ -601,6 +982,32 @@ icu <- plotLogGrowth(
 ```
 
 
+# Analyse of Emergency Data
+
+## France per departments {.tabset  .tabset-fade .tabset-pills}
+
+### Number of daily emergency room visits for suspicion of COVID-19
+
+```{r plotERdep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h
+```
 
 
+### Number of daily medical acts (SOS Médecin) for suspicion of COVID-19
+
+```{r plotSOSdep}
+sos <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+sos
+```
 
