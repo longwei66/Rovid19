@@ -7,15 +7,18 @@ categories:
   - "COVID-19"
 author:
   - name: datapleth
+creative_commons: CC BY-SA
 twitter:
   creator: "@datapleth"
 output:
-  distill::distill_article:
+  html_document:
     toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
     toc_depth: 3
-    self_contained: false
-editor_options: 
-  chunk_output_type: console
+    self_contained: true
+    number_sections: true
 ---
 
 ```{r loadLibs, include=FALSE}
@@ -27,7 +30,7 @@ library(ggplot2)
 library(RColorBrewer)
 library(plotly)
 library(patchwork)
-knitr::opts_chunk$set(fig.width=9, fig.height=9) 
+knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE) 
 ```
 
 
@@ -35,12 +38,26 @@ knitr::opts_chunk$set(fig.width=9, fig.height=9)
 
 # Introduction & Objectives
 
+This documents provides an analysis of Covid-19 outbreak in France based on 
+offical data, as well as some comparison with Italy.
 
+Situation will be reviewed at country level, regional level and department
+level.
 
+Visualisation and some elements of code are inspired by the best reference we
+found during this period :
 
-# Get data for France from official governement source
+- John Burn-Murdoch ( )@jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
+- Tim Churches with scientist at South Western Sydney Clinical School, UNSW Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, Australia. ( [link](https://swscs.med.unsw.edu.au) and his work [here](https://timchurches.github.io/blog/))
 
-## French Offical Data Sources
+This report is published under creative common CC BY-SA, 
+
+# France data  {.tabset}
+
+## Data Sources
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
 
 From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/)
 
@@ -53,6 +70,7 @@ From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-r
 > département et sexe du patient : nombre de patients hospitalisés, nombre de 
 > personnes actuellement en réanimation ou soins intensifs, nombre cumulé de 
 > personnes retournées à domicile, nombre cumulé de personnes décédées.
+
 > 2/ Les données quotidiennes relatives aux établissements hospitaliers par
 > département : nombre cumulé de services ayant déclaré au moins un cas.
 > Pour chacun des fichiers, une fiche de métadonnées est proposée.
@@ -75,11 +93,7 @@ opencovid_fr_url <- "https://raw.githubusercontent.com/opencovid19-fr/data/maste
 ```
 
 
-## France - Hospital Official Data - per Departement (subdivision of french Regions)
-
-The first dataset we use contains case data by departments as described bellow.
-
-### Codebook
+## Data Struture
 
 ```{r loadCleanFranceOfficialCodebook, echo=FALSE}
 france_official_codebook <- data.table::as.data.table(read.csv(file = france_official_codebook_url, sep = ";"))
@@ -92,8 +106,6 @@ france_official_codebook %>%
   kable() %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
-
-### Import Data and merge with regions
 
 We import these data and merge associate department with their Region names
 
@@ -119,20 +131,75 @@ france_official_dep <- data.table::as.data.table(merge(
   , by.x = "department"
   , by.y = "num_dep"
 ))
-
-datatable(france_official_dep)
 ```
 
-### Visualise
+Complementary data with cumulative number of cases. This information
+is not present in hospital data.
 
-#### Small Multiples - France
+```{r}
+opencovid_fr <- read.csv(opencovid_fr_url)
+```
 
-```{r visualise_france_official_dep}
+
+
+
+## Data per department
+
+```{r viewHospitalDataPerDep}
+DT::datatable(france_official_dep
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+## Data per regions
+
+We combine now department data per region.
+
+```{r agregateHospPerRegion}
+france_official_dep %>%
+  group_by(region_name,sex,date) %>%
+  summarise(
+    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
+    , icu_now = sum(icu_now, na.rm = TRUE)
+    , back_home_now = sum(back_home_now, na.rm = TRUE)
+    , death_cum = sum(death_cum, na.rm = TRUE)
+    ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_reg
+```
+
+
+
+```{r viewHospitalDataPerRegion}
+DT::datatable(france_official_reg
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
+# Visualise Hospital Data
+
+
+```{r smallMultipleHostpital}
 plotSmallMultipleCovid <- function(
   my_data = NULL
   , mygenre = 0
   , myvariable = "death_cum"
   , colfeature = "region_name"
+  , facetfeature = "dep_name"
   , ncol = 10
 ){
   
@@ -154,15 +221,16 @@ plotSmallMultipleCovid <- function(
     ) + 
     scale_fill_manual(values = mycolors) +
     facet_wrap(
-      . ~ dep_name
+      as.formula(paste(". ~ ", facetfeature))
       , ncol = ncol
       #, scales = "free_y"
     ) + 
     labs(
-      y= myvariable
+      y= "" #myvariable
       , title=paste0("France per department : ", myvariable)
       #, subtitle="Note: differing y-axis scales"
     ) +
+    theme_minimal() +
     theme(
       #legend.position = "none"
       strip.text.x = element_text(
@@ -177,51 +245,70 @@ plotSmallMultipleCovid <- function(
         , size = 0.5
         #, linetype="solid"
       )
-      , axis.text.x = element_text(angle = 90)
+      , axis.text.x = element_text(
+        angle = 90
+        , size = 8
+      )
+      #, plot.background = element_rect(fill = '#effffe', colour = '#effffe')
     ) -> fr
   return(fr)
 }
 ```
 
 
+## France per departments {.tabset  .tabset-fade .tabset-pills}
+
+### Currently hospitalized
+
 ```{r plotHosp}
 h <- plotSmallMultipleCovid(
   my_data = france_official_dep
   , mygenre = 0
   , myvariable = "hospitalized_now"
+  , colfeature = "region_name"
 )
 h
 ```
 
-```{r plotDeath}
-g <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
-  , myvariable = "death_cum"
-)
-g
-```
-
-```{r plotIcu}
-i <- plotSmallMultipleCovid(
-  my_data = france_official_dep
-  , mygenre = 0
-  , myvariable = "icu_now"
-)
-i
-```
+### Currently back home
 
 ```{r plotHome}
 ho <- plotSmallMultipleCovid(
   my_data = france_official_dep
   , mygenre = 0
   , myvariable = "back_home_now"
+  , colfeature = "region_name"
 )
 ho
 ```
 
+### Currently in ICU
 
-#### Ile de France
+```{r plotIcu}
+i <- plotSmallMultipleCovid(
+  my_data = france_official_dep
+  , mygenre = 0
+  , myvariable = "icu_now"
+  , colfeature = "region_name"
+)
+i
+```
+
+### Cumulated deaths
+
+```{r plotDeath}
+g <- plotSmallMultipleCovid(
+  my_data = france_official_dep
+  , mygenre = 0
+  , myvariable = "death_cum"
+  , colfeature = "region_name"
+)
+g
+```
+
+
+
+## Ile de France per department
 
 ```{r plotIdf}
 idf_home <- plotSmallMultipleCovid(
@@ -258,7 +345,79 @@ idf_icu <- plotSmallMultipleCovid(
 
 ```
 
-```{r}
+
+
+
+## France per Regions {.tabset .tabset-fade  .tabset-pills}
+
+### Currently hospitalized 
+
+```{r plotHospR}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_reg
+  , mygenre = 0
+  , myvariable = "hospitalized_now"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 6
+)
+h
+```
+
+### Currently back home
+
+```{r plotHomeR}
+ho <- plotSmallMultipleCovid(
+  my_data = france_official_reg
+  , mygenre = 0
+  , myvariable = "back_home_now"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 6
+)
+ho
+```
+
+### Currently in ICU
+
+```{r plotIcuR}
+i <- plotSmallMultipleCovid(
+  my_data = france_official_reg
+  , mygenre = 0
+  , myvariable = "icu_now"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 6
+)
+i
+```
+
+### Cumulated deaths
+
+```{r plotDeathR}
+g <- plotSmallMultipleCovid(
+  my_data = france_official_reg
+  , mygenre = 0
+  , myvariable = "death_cum"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 6
+)
+g
+```
+
+
+
+
+
+## Comparison of cases growth {.tabset  .tabset-fade  .tabset-pills}
+
+As the outbrek has not started at the same time in the various regions and
+department of France, the best visualisation is based on growth of cumulated
+cases from a given level, for instance, since the 100th death. 
+These visuals and the code are inspired by the work of John Burn-Murdoch ( )@jburnmurdoch ) from the Financial Times.
+
+```{r plotLogGrowthFunction}
 library(shadowtext)
 library(rlang)
 
@@ -266,11 +425,13 @@ library(rlang)
 plotLogGrowth <- function(
   mydata = NULL
   , myvariable = "hospitalized_now"
-  , start_case = 500 ){
+  , start_case = 500
+  , colfeature = "department"
+  ){
   
   ## Prepare data, each time series should start when they reach start_case
   mydata %>%
-    group_by(department) %>%
+    group_by(!!as.name(colfeature)) %>%
     mutate(
       days_since_10 = as.numeric(
         date-min(
@@ -280,34 +441,35 @@ plotLogGrowth <- function(
     ) %>%
     ungroup() %>%
     filter(is.finite(days_since_10)) %>%
-    group_by(department) %>%
+    group_by(!!as.name(colfeature)) %>%
     filter(
-      sum(!!as.name(myvariable) >= start_case) >= 5
+      sum(!!as.name(myvariable) >= start_case) >= 3 # at least 3 days visible
     ) %>%
     filter(
       !!as.name(myvariable) >= start_case
     ) -> my_df
   
   ## Compute colors 
-  nb_cols <- length(unique(my_df$department))
+  #nb_cols <- length(unique(my_df$department))
+  nb_cols <- length(unique(my_df[[colfeature]]))
   mycolors <- colorRampPalette(brewer.pal(8, "Dark2"))(nb_cols)
   mycolors <- c(mycolors,"#DDDDDD","#DDDDDD","#DDDDDD")
-  names(mycolors) = c(as.character(unique(my_df$department)), "33% daily rise","25% daily rise","15% daily rise")
+  names(mycolors) = c(as.character(unique(my_df[[colfeature]])), "33% daily rise","25% daily rise","15% daily rise")
   
   ## compute max x for growth rates displayed as reference
   max_x <- max(my_df$days_since_10) + 2
   
   my_df %>% 
     bind_rows(
-      tibble(department = "33% daily rise", days_since_10 = 0:max_x) %>%
+      tibble(!!colfeature := "33% daily rise", days_since_10 = 0:max_x) %>%
         mutate(!!myvariable := start_case*1.33^days_since_10)
     ) %>%
     bind_rows(
-      tibble(department = "25% daily rise", days_since_10 = 0:max_x) %>%
+      tibble(!!colfeature := "25% daily rise", days_since_10 = 0:max_x) %>%
         mutate(!!myvariable := start_case*1.25^days_since_10)
     ) %>%
     bind_rows(
-      tibble(department = "15% daily rise", days_since_10 = 0:max_x) %>%
+      tibble(!!colfeature := "15% daily rise", days_since_10 = 0:max_x) %>%
         mutate(!!myvariable := start_case*1.15^days_since_10)
     ) %>%
     ungroup() -> my_df
@@ -319,7 +481,7 @@ plotLogGrowth <- function(
       aes(
         x = days_since_10
         , y = !!as.name(myvariable)
-        , col = department
+        , col = !!as.name(colfeature)
       )
     ) +
     geom_hline(yintercept = start_case) +
@@ -331,38 +493,49 @@ plotLogGrowth <- function(
       , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000)
     ) +
     # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
-    scale_x_continuous(expand = expand_scale(add = c(0,1))) +
+    scale_x_continuous(
+      expand = expand_scale(add = c(0,1))
+      , limits = c(0, max_x + 2)
+    ) +
     theme_minimal() +
     theme(
-      panel.grid.minor = element_blank(),
-      legend.position = "none",
-      plot.margin = margin(3,15,3,3,"mm")
+      panel.grid.minor = element_blank()
+      , legend.position = "none"
+      , plot.margin = margin(3,15,3,3,"mm")
+      #, plot.background = element_rect(fill = '#effffe', colour = '#effffe')
     ) +
     coord_cartesian(clip = "off") +
     scale_colour_manual(values = mycolors ) +
     #facet_wrap(facets = region_name ~ ., ncol = 3) +
     geom_shadowtext(
       aes(
-        label = paste0(" ",department)
+        #label = paste0(" ",colfeature)
+        label = paste0(" ", eval(parse(text = colfeature)))
       )
+      , size = 3
       , hjust=0
       , vjust = 0
       , data = . %>%
-        group_by(department) %>%
-        top_n(1, days_since_10), bg.color = "white"
+        group_by(!!as.name(colfeature)) %>%
+        top_n(1, days_since_10), bg.color = "#FEFEFE"
     ) +
     labs(
       x = paste0("Number of days since ",start_case,"th case")
-      , y = myvariable
-      , subtitle = "Growth of cumulated cases (log scale)") -> g
+      , y = "" #myvariable
+      , subtitle = paste0("Growth of ",myvariable," (log scale)")
+    ) -> g
   
   #ggplotly(g)
-  return(g)
+  return(list(
+    graph = g
+    , data = my_df
+  ))
 }
 ```
 
-```{r}
+### Per departments
 
+```{r logWorstDep}
 my_df <- france_official_dep[ 
   #region_name == "Île-de-France" &
   sex == 0
@@ -388,17 +561,46 @@ icu <- plotLogGrowth(
   , start_case = 100
   , myvariable = "icu_now" #death_cum"
 )
-(home + hosp) / ( icu + death )
+(home$graph | hosp$graph) / ( icu$graph | death$graph )
+```
+
+
+### Per regions
+
+```{r logWorstReg, echo=FALSE}
+my_df <- france_official_reg[ 
+  #region_name == "Île-de-France" &
+  sex == 0
+  ] 
+
+home <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 200
+  , myvariable = "back_home_now" #death_cum"
+  , colfeature = "region_name"
+)
+hosp <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 700
+  , myvariable = "hospitalized_now" #death_cum"
+  , colfeature = "region_name"
+)
+death <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 100
+  , myvariable = "death_cum" #death_cum"
+  , colfeature = "region_name"
+)
+icu <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 200
+  , myvariable = "icu_now" #death_cum"
+  , colfeature = "region_name"
+)
+(home$graph | hosp$graph) / ( icu$graph | death$graph )
 ```
 
 
 
 
-
-
-# Opencovid data
-
-```{r}
-opencovid_fr <- read.csv(opencovid_fr_url)
-```
 
