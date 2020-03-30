@@ -51,7 +51,8 @@ found during this period :
 - John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
 - Tim Churches with scientist at South Western Sydney Clinical School, UNSW Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, Australia. ( [link](https://swscs.med.unsw.edu.au) and his work [here](https://timchurches.github.io/blog/))
 
-This report is published under creative common CC BY-SA, 
+This report is published under creative common CC BY-SA, and code should be
+GPL 3.0
 
 
 # France in the word {.tabset}
@@ -69,40 +70,40 @@ John Burn-Murdoch ( @jburnmurdoch )
 start_case <- 100 #600
 
 my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
-    gather(date, cases, 5:ncol(.)) %>%
-    mutate(date = as.Date(date, "%m/%d/%y")) %>%
-    group_by(country = `Country/Region`, date) %>%
-    summarise(cases = sum(cases)) %>%
-    filter(
-        country != "Others" &
-            #country != "Mainland China" &
-            country != "Cruise Ship"
-        ) %>%
-    bind_rows(
-        tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
-    ) %>%
-    group_by(country) %>%
-    mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
-    ungroup() %>%
-    filter(is.finite(days_since_100)) %>% 
-    group_by(country) %>%
-    mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
-    filter(sum(cases >= start_case) >= 5) %>%
-    filter(cases >= start_case) %>% 
-    bind_rows(
-        tibble(country = "33% daily rise", days_since_100 = 0:25) %>%
-            mutate(cases = start_case*1.33^days_since_100)
-    ) %>%
-    ungroup() %>%
-    mutate(
-        country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
-    ) %>%
-    filter(country %in% c(
-        "France","Italy", "China"
-        , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
-        , "33% daily rise" 
-        ))
-    
+  gather(date, cases, 5:ncol(.)) %>%
+  mutate(date = as.Date(date, "%m/%d/%y")) %>%
+  group_by(country = `Country/Region`, date) %>%
+  summarise(cases = sum(cases)) %>%
+  filter(
+    country != "Others" &
+      #country != "Mainland China" &
+      country != "Cruise Ship"
+  ) %>%
+  bind_rows(
+    tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
+  ) %>%
+  group_by(country) %>%
+  mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
+  ungroup() %>%
+  filter(is.finite(days_since_100)) %>% 
+  group_by(country) %>%
+  mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
+  filter(sum(cases >= start_case) >= 5) %>%
+  filter(cases >= start_case) %>% 
+  bind_rows(
+    tibble(country = "33% daily rise", days_since_100 = 0:25) %>%
+      mutate(cases = start_case*1.33^days_since_100)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
+  ) %>%
+  filter(country %in% c(
+    "France","Italy", "China", "United Kingdom"
+    , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
+    , "33% daily rise" 
+  ))
+
 #my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 #my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
 #today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 32964, days_since_100 = 27, new_cases = 32964))
@@ -110,50 +111,57 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
 
 
 my_df %>%
-    # filter(days_since_100 <= 10) %>%
-    ggplot(aes(days_since_100, cases, col = country)) +
-    geom_hline(yintercept = 100) +
-    geom_vline(xintercept = 0) +
-    geom_line(size = 0.8) +
-    geom_point(pch = 21, size = 1) +
-    scale_y_log10(
-        expand = expand_scale(add = c(0,0.1))
-        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000)
-        ) +
-    # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
-    scale_x_continuous(expand = expand_scale(add = c(0,1))) +
-    theme_minimal() +
-    theme(
-        panel.grid.minor = element_blank(),
-        legend.position = "none",
-        plot.margin = margin(3,15,3,3,"mm")
-    ) +
-    coord_cartesian(clip = "off") +
-    scale_colour_manual(values = c(
-        "China" = "#EB5E8D"
-        , "United Kingdom" = "#ce3140"
-        , "US" = "#EB5E8D"
-        , "Italy" = "black"
-        , "France" = "#208fce"
-        , "Germany" = "#c2b7af"
-        , "Hong Kong" = "#1E8FCC"
-        , "Iran" = "#9dbf57"
-        , "Japan" = "#208fce"
-        , "Singapore" = "#1E8FCC"
-        , "Korea, South" = "#208fce"
-        , "Belgium" = "#c2b7af"
-        , "Netherlands" = "#c2b7af"
-        , "Norway" = "#c2b7af"
-        , "Spain" = "#c2b7af"
-        , "Sweden" = "#c2b7af"
-        , "Switzerland" = "#c2b7af"
-        , "33% daily rise" = "#D9CCC3"
-        )) +
-    geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
-    labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases") -> g
+  # filter(days_since_100 <= 10) %>%
+  ggplot(aes(days_since_100, cases, col = country)) +
+  geom_hline(yintercept = 100) +
+  geom_vline(xintercept = 0) +
+  geom_line(size = 0.8) +
+  geom_point(pch = 21, size = 1) +
+  scale_y_log10(
+    expand = expand_scale(add = c(0,0.1))
+    , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000, 160000)
+  ) +
+  # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
+  scale_x_continuous(expand = expand_scale(add = c(0,1))) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(3,15,3,3,"mm")
+  ) +
+  coord_cartesian(clip = "off") +
+  scale_colour_manual(values = c(
+    "China" = "#EB5E8D"
+    , "United Kingdom" = "#ce3140"
+    , "US" = "#EB5E8D"
+    , "Italy" = "black"
+    , "France" = "#208fce"
+    , "Germany" = "#c2b7af"
+    , "Hong Kong" = "#1E8FCC"
+    , "Iran" = "#9dbf57"
+    , "Japan" = "#208fce"
+    , "Singapore" = "#1E8FCC"
+    , "Korea, South" = "#208fce"
+    , "Belgium" = "#c2b7af"
+    , "Netherlands" = "#c2b7af"
+    , "Norway" = "#c2b7af"
+    , "Spain" = "#c2b7af"
+    , "Sweden" = "#c2b7af"
+    , "Switzerland" = "#c2b7af"
+    , "33% daily rise" = "#D9CCC3"
+  )) +
+  geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
+  labs(x = "Number of days since 100th case", y = "", subtitle = "Total number of cases") -> g
 
 g
 ```
+
+```{r}
+fr_dates <- my_df %>% filter( country == "France") %>% select(date)
+```
+
+
+The lastest availabe data are for France `r max(fr_dates$date)`.
 
 
 ## Deaths (cum)
@@ -169,43 +177,43 @@ g
 start_case <- 10 #600
 
 my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
-    gather(date, cases, 5:ncol(.)) %>%
-    mutate(date = as.Date(date, "%m/%d/%y")) %>%
-    group_by(country = `Country/Region`, date) %>%
-    summarise(cases = sum(cases)) %>%
-    filter(country != "Others" & country != "Mainland China" & country != "Cruise Ship") %>%
-    bind_rows(
-        tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
-    ) %>%
-    group_by(country) %>%
-    mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
-    ungroup() %>%
-    filter(is.finite(days_since_100)) %>% 
-    group_by(country) %>%
-    #mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
-    filter(sum(cases >= start_case) >= 5) %>%
-    filter(cases >= start_case) %>% 
-    bind_rows(
-        tibble(country = "33% daily rise", days_since_100 = 0:33) %>%
-            mutate(cases = start_case*1.33^days_since_100)
-    ) %>%
-    bind_rows(
-        tibble(country = "25% daily rise", days_since_100 = 0:33) %>%
-            mutate(cases = start_case*1.25^days_since_100)
-    ) %>%
-    bind_rows(
-        tibble(country = "15% daily rise", days_since_100 = 0:33) %>%
-            mutate(cases = start_case*1.15^days_since_100)
-    ) %>%
-    ungroup() %>%
-    mutate(
-        country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
-    ) %>%
-    filter(country %in% c(
-        "France","Italy"
-        , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
-        , "33% daily rise" , "25% daily rise", "15% daily rise"
-    ))
+  gather(date, cases, 5:ncol(.)) %>%
+  mutate(date = as.Date(date, "%m/%d/%y")) %>%
+  group_by(country = `Country/Region`, date) %>%
+  summarise(cases = sum(cases)) %>%
+  filter(country != "Others" & country != "Mainland China" & country != "Cruise Ship") %>%
+  bind_rows(
+    tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
+  ) %>%
+  group_by(country) %>%
+  mutate(days_since_100 = as.numeric(date-min(date[cases >= start_case]))) %>%
+  ungroup() %>%
+  filter(is.finite(days_since_100)) %>% 
+  group_by(country) %>%
+  #mutate(new_cases = cases-cases[days_since_100 == 0]) %>%
+  filter(sum(cases >= start_case) >= 5) %>%
+  filter(cases >= start_case) %>% 
+  bind_rows(
+    tibble(country = "33% daily rise", days_since_100 = 0:33) %>%
+      mutate(cases = start_case*1.33^days_since_100)
+  ) %>%
+  bind_rows(
+    tibble(country = "25% daily rise", days_since_100 = 0:33) %>%
+      mutate(cases = start_case*1.25^days_since_100)
+  ) %>%
+  bind_rows(
+    tibble(country = "15% daily rise", days_since_100 = 0:33) %>%
+      mutate(cases = start_case*1.15^days_since_100)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
+  ) %>%
+  filter(country %in% c(
+    "France","Italy"
+    , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
+    , "33% daily rise" , "25% daily rise", "15% daily rise"
+  ))
 
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
@@ -214,45 +222,45 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
 
 
 my_df %>%
-    # filter(days_since_100 <= 10) %>%
-    ggplot(aes(days_since_100, cases, col = country)) +
-    #geom_hline(yintercept = 10) +
-    #geom_vline(xintercept = 0) +
-    geom_line(size = 0.8) +
-    geom_point(pch = 21, size = 1) +
-    scale_y_log10(expand = expand_scale(add = c(0,0.1)), breaks=c(100, 200, 500, 1000, 2000, 5000, 10000)) +
-    # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
-    scale_x_continuous(expand = expand_scale(add = c(0,1))) +
-    theme_minimal() +
-    theme(
-        panel.grid.minor = element_blank(),
-        legend.position = "none",
-        plot.margin = margin(3,15,3,3,"mm")
-    ) +
-    coord_cartesian(clip = "off") +
-    scale_colour_manual(values = c(
-        "United Kingdom" = "#ce3140"
-        , "US" = "#EB5E8D"
-        , "Italy" = "black"
-        , "France" = "#208fce"
-        , "Germany" = "#c2b7af"
-        , "Hong Kong" = "#1E8FCC"
-        , "Iran" = "#9dbf57"
-        , "Japan" = "#208fce"
-        , "Singapore" = "#1E8FCC"
-        , "Korea, South" = "#208fce"
-        , "Belgium" = "#c2b7af"
-        , "Netherlands" = "#c2b7af"
-        , "Norway" = "#c2b7af"
-        , "Spain" = "#c2b7af"
-        , "Sweden" = "#c2b7af"
-        , "Switzerland" = "#c2b7af"
-        , "33% daily rise" = "#D9CCC3"
-        , "25% daily rise" = "#D9CCC3"
-        , "15% daily rise" = "#D9CCC3"
-        )) +
-    geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
-    labs(x = "Number of days since 10th death", y = "", subtitle = "Total number of cases")  -> g
+  # filter(days_since_100 <= 10) %>%
+  ggplot(aes(days_since_100, cases, col = country)) +
+  #geom_hline(yintercept = 10) +
+  #geom_vline(xintercept = 0) +
+  geom_line(size = 0.8) +
+  geom_point(pch = 21, size = 1) +
+  scale_y_log10(expand = expand_scale(add = c(0,0.1)), breaks=c(100, 200, 500, 1000, 2000, 5000, 10000)) +
+  # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
+  scale_x_continuous(expand = expand_scale(add = c(0,1))) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(3,15,3,3,"mm")
+  ) +
+  coord_cartesian(clip = "off") +
+  scale_colour_manual(values = c(
+    "United Kingdom" = "#ce3140"
+    , "US" = "#EB5E8D"
+    , "Italy" = "black"
+    , "France" = "#208fce"
+    , "Germany" = "#c2b7af"
+    , "Hong Kong" = "#1E8FCC"
+    , "Iran" = "#9dbf57"
+    , "Japan" = "#208fce"
+    , "Singapore" = "#1E8FCC"
+    , "Korea, South" = "#208fce"
+    , "Belgium" = "#c2b7af"
+    , "Netherlands" = "#c2b7af"
+    , "Norway" = "#c2b7af"
+    , "Spain" = "#c2b7af"
+    , "Sweden" = "#c2b7af"
+    , "Switzerland" = "#c2b7af"
+    , "33% daily rise" = "#D9CCC3"
+    , "25% daily rise" = "#D9CCC3"
+    , "15% daily rise" = "#D9CCC3"
+  )) +
+  geom_shadowtext(aes(label = paste0(" ",country)), hjust=0, vjust = 0, data = . %>% group_by(country) %>% top_n(1, days_since_100), bg.color = "white") +
+  labs(x = "Number of days since 10th death", y = "", subtitle = "Total number of cases")  -> g
 
 g
 ```
@@ -374,7 +382,7 @@ france_official_hospital_dep %>%
     , icu_now = sum(icu_now, na.rm = TRUE)
     , back_home_now = sum(back_home_now, na.rm = TRUE)
     , death_cum = sum(death_cum, na.rm = TRUE)
-    ) %>%
+  ) %>%
   ungroup() %>%
   data.table::as.data.table()-> france_official_reg
 ```
@@ -393,8 +401,36 @@ DT::datatable(france_official_reg
 )
 ```
 
+### Data for France (Total)
+
+We use department data to aggregate results at Country level
+
+```{r agregateHospTotal}
+france_official_hospital_dep %>%
+  group_by(sex,date) %>%
+  summarise(
+    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
+    , icu_now = sum(icu_now, na.rm = TRUE)
+    , back_home_now = sum(back_home_now, na.rm = TRUE)
+    , death_cum = sum(death_cum, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  mutate( sex = as.factor(sex)) %>%
+  data.table::as.data.table()-> france_official_hospital_total
+```
 
 
+```{r viewHospitalDataTotal}
+DT::datatable(france_official_hospital_total
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
 
 
 ## Emergency Data {.tabset .tabset-fade .tabset-pills}
@@ -584,7 +620,7 @@ opencovid_fr <- read.csv(opencovid_fr_url)
 
 
 
-# Analyse of Hospital Data
+# Analysis of Hospital Data
 
 
 ```{r smallMultipleHostpital}
@@ -594,6 +630,7 @@ plotSmallMultipleCovid <- function(
   , colfeature = "region_name"
   , facetfeature = "dep_name"
   , ncol = 10
+  , mytitle_base = "France per departments : "
 ){
   
   # Define the number of colors you want
@@ -612,15 +649,19 @@ plotSmallMultipleCovid <- function(
       stat="identity"
       , aes_string(fill= colfeature)
     ) + 
-    scale_fill_manual(values = mycolors) +
-    facet_wrap(
+    scale_fill_manual(values = mycolors) -> g
+  
+  if(!is.null(facetfeature)){
+    g <- g + facet_wrap(
       as.formula(paste(". ~ ", facetfeature))
       , ncol = ncol
       #, scales = "free_y"
-    ) + 
+    )
+  }
+  g + 
     labs(
       y= "" #myvariable
-      , title=paste0("France per department : ", myvariable)
+      , title=paste0(mytitle_base, myvariable)
       #, subtitle="Note: differing y-axis scales"
     ) +
     theme_minimal() +
@@ -699,7 +740,7 @@ g
 
 ### Zoom : Ile de France
 
-```{r plotIdf}
+```{r plotIdfHosp}
 idf_home <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "back_home_now"
@@ -744,6 +785,7 @@ h <- plotSmallMultipleCovid(
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 6
+  , mytitle_base = "France per regions : "
 )
 h
 ```
@@ -757,6 +799,7 @@ ho <- plotSmallMultipleCovid(
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 6
+  , mytitle_base = "France per regions : "
 )
 ho
 ```
@@ -770,6 +813,7 @@ i <- plotSmallMultipleCovid(
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 6
+  , mytitle_base = "France per regions : "
 )
 i
 ```
@@ -783,10 +827,56 @@ g <- plotSmallMultipleCovid(
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 6
+  , mytitle_base = "France per regions : "
 )
 g
 ```
 
+
+## France Total
+
+
+
+```{r plotHospFT}
+hosp <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_total[ sex == 0 | TRUE ]
+  , myvariable = "hospitalized_now"
+  , colfeature = "sex"
+  , facetfeature = "sex"
+  , ncol = 3
+  , mytitle_base = "France  : "
+)
+
+home <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_total[ sex == 0 | TRUE ]
+  , myvariable = "back_home_now"
+  , colfeature = "sex"
+  , facetfeature = "sex"
+  , ncol = 3
+  , mytitle_base = "France  : "
+)
+
+icu <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_total[ sex == 0 | TRUE ]
+  , myvariable = "icu_now"
+  , colfeature = "sex"
+  , facetfeature = "sex"
+  , ncol = 3
+  , mytitle_base = "France  : "
+)
+
+
+dcd <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_total[ sex == 0 ]
+  , myvariable = "death_cum"
+  , colfeature = "sex"
+  , facetfeature = "sex"
+  , ncol = 3
+  , mytitle_base = "France  : "
+)
+
+( hosp + home ) / ( icu + dcd)
+```
 
 
 
@@ -808,7 +898,7 @@ plotLogGrowth <- function(
   , myvariable = "hospitalized_now"
   , start_case = 500
   , colfeature = "department"
-  ){
+){
   
   ## Prepare data, each time series should start when they reach start_case
   mydata %>%
@@ -835,23 +925,28 @@ plotLogGrowth <- function(
   nb_cols <- length(unique(my_df[[colfeature]]))
   mycolors <- colorRampPalette(brewer.pal(8, "Dark2"))(nb_cols)
   mycolors <- c(mycolors,"#DDDDDD","#DDDDDD","#DDDDDD")
-  names(mycolors) = c(as.character(unique(my_df[[colfeature]])), "33% daily rise","25% daily rise","15% daily rise")
+  names(mycolors) = c(
+    as.character(unique(my_df[[colfeature]]))
+    , "x2 every 2 days"
+    , "x2 every 3 days"
+    , "x2 every week"
+    )
   
   ## compute max x for growth rates displayed as reference
   max_x <- max(my_df$days_since_10) + 2
   
   my_df %>% 
     bind_rows(
-      tibble(!!colfeature := "33% daily rise", days_since_10 = 0:max_x) %>%
-        mutate(!!myvariable := start_case*1.33^days_since_10)
+      tibble(!!colfeature := "x2 every 2 days", days_since_10 = 0:max_x) %>%
+        mutate(!!myvariable := start_case*(2^(1/2))^days_since_10)
     ) %>%
     bind_rows(
-      tibble(!!colfeature := "25% daily rise", days_since_10 = 0:max_x) %>%
-        mutate(!!myvariable := start_case*1.25^days_since_10)
+      tibble(!!colfeature := "x2 every 3 days", days_since_10 = 0:max_x) %>%
+        mutate(!!myvariable := start_case*(2^(1/3))^days_since_10)
     ) %>%
     bind_rows(
-      tibble(!!colfeature := "15% daily rise", days_since_10 = 0:max_x) %>%
-        mutate(!!myvariable := start_case*1.15^days_since_10)
+      tibble(!!colfeature := "x2 every week", days_since_10 = 0:max_x) %>%
+        mutate(!!myvariable := start_case*(2^(1/7))^days_since_10)
     ) %>%
     ungroup() -> my_df
   
@@ -904,7 +999,7 @@ plotLogGrowth <- function(
       x = paste0("Number of days since ",start_case,"th case")
       , y = "" #myvariable
       , subtitle = paste0("Growth of ",myvariable," (log scale)")
-    ) -> g
+    )  -> g
   
   #ggplotly(g)
   return(list(
@@ -942,7 +1037,11 @@ icu <- plotLogGrowth(
   , start_case = 100
   , myvariable = "icu_now" #death_cum"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph )
+(home$graph | hosp$graph) / ( icu$graph | death$graph ) + 
+  plot_annotation(
+    title = "Covid-19 France Hospital data by departments"
+    , subtitle = "by datapleth.io inspired by @jburnmurdoch"
+    )
 ```
 
 
@@ -978,17 +1077,77 @@ icu <- plotLogGrowth(
   , myvariable = "icu_now" #death_cum"
   , colfeature = "region_name"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph )
+(home$graph | hosp$graph) / ( icu$graph | death$graph )  + 
+  plot_annotation(
+    title = "Covid-19 France Hospital data by regions"
+    , subtitle = "by datapleth.io inspired by @jburnmurdoch"
+    )
 ```
 
 
-# Analyse of Emergency Data
+
+### France Total
+
+```{r logWorstFRTot, echo=FALSE}
+my_df <- france_official_hospital_total[ 
+  #region_name == "Île-de-France" &
+  sex == 0 | TRUE
+  ] 
+
+home <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 1000
+  , myvariable = "back_home_now" #death_cum"
+  , colfeature = "sex"
+)
+hosp <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 3000
+  , myvariable = "hospitalized_now" #death_cum"
+  , colfeature = "sex"
+)
+death <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 200
+  , myvariable = "death_cum" #death_cum"
+  , colfeature = "sex"
+)
+icu <- plotLogGrowth(
+  mydata = my_df
+  , start_case = 1000
+  , myvariable = "icu_now" #death_cum"
+  , colfeature = "sex"
+)
+(home$graph | hosp$graph) / ( icu$graph | death$graph )  + 
+  plot_annotation(
+    title = "Covid-19 France Hospital data by genre"
+    , subtitle = "by datapleth.io inspired by @jburnmurdoch"
+    )
+```
+
+
+
+
+# Analysis of Emergency Data
 
 ## France per departments {.tabset  .tabset-fade .tabset-pills}
 
-### Number of daily emergency room visits for suspicion of COVID-19
+### Total ER daily visits
 
-```{r plotERdep}
+```{r plotERTotdep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h
+```
+
+
+### ER daily visits for suspicion of COVID-19
+
+```{r plotERCoviddep}
 h <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_pass_corona"
@@ -999,9 +1158,28 @@ h
 ```
 
 
-### Number of daily medical acts (SOS Médecin) for suspicion of COVID-19
 
-```{r plotSOSdep}
+### Total Daily medical acts (SOS Médecin)
+
+```{r plotSOSTotaldep}
+sos <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+sos
+```
+
+
+
+
+
+
+
+### Daily medical acts (SOS Médecin) for suspicion of COVID-19
+
+```{r plotSOSCoviddep}
 sos <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_acte_corona"
@@ -1010,4 +1188,87 @@ sos <- plotSmallMultipleCovid(
 )
 sos
 ```
+
+
+
+### Zoom : Ile de France
+
+```{r plotIdfER}
+idf_er_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_er_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_er_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_sos_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_sos_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+
+
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro)
+
+```
+
+
+### Zoom : Grand Est
+
+```{r plotGEER}
+idf_er_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_er_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_er_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+
+idf_sos_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "dep"
+  , ncol = 3
+)
+idf_sos_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "dep"
+  , ncol = 3
+)
+
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro)
+
+```
+
+## France per regions (soon) {.tabset  .tabset-fade .tabset-pills}
 

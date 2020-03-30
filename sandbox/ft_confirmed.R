@@ -42,7 +42,7 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
         country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
     ) %>%
     filter(country %in% c(
-        "France","Italy", "China"
+        "France","Italy", "China", "United Kingdom"
         , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
         , "33% daily rise" 
         ))
@@ -62,7 +62,7 @@ my_df %>%
     geom_point(pch = 21, size = 1) +
     scale_y_log10(
         expand = expand_scale(add = c(0,0.1))
-        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000)
+        , breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000, 40000, 80000, 160000)
         ) +
     # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
     scale_x_continuous(expand = expand_scale(add = c(0,1))) +

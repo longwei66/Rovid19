@@ -46,15 +46,15 @@ my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/mas
         country = country %>% str_replace_all("( SAR)|( \\(.+)|(Republic of )", "")
     ) %>%
     filter(country %in% c(
-        "France","Italy"
+        "France","Italy", "United Kingdom"
         , "Korea, South", "Japan", "US", "Iran", "Spain", "Germany"
         , "33% daily rise" , "25% daily rise", "15% daily rise"
     ))
 
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
 # my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
-today <- data.frame(list(country = "France",date = as.Date("2020-03-27"), cases = 1995, days_since_100 = 20, new_cases = 1995))
-my_df <- rbind(my_df, today)    
+#today <- data.frame(list(country = "France",date = as.Date("2020-03-27"), cases = 1995, days_since_100 = 20, new_cases = 1995))
+#my_df <- rbind(my_df, today)    
 
 
 my_df %>%
@@ -75,8 +75,8 @@ my_df %>%
     ) +
     coord_cartesian(clip = "off") +
     scale_colour_manual(values = c(
-        "United Kingdom" = "#ce3140"
-        , "US" = "#EB5E8D"
+        "US" = "#EB5E8D"
+        , "United Kingdom" = "#EB5E8D"
         , "Italy" = "black"
         , "France" = "#208fce"
         , "Germany" = "#c2b7af"
