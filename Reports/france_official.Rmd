@@ -49,7 +49,10 @@ Visualisation and some elements of code are inspired by the best reference we
 found during this period :
 
 - John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
-- Tim Churches with scientist at South Western Sydney Clinical School, UNSW Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, Australia. ( [link](https://swscs.med.unsw.edu.au) and his work [here](https://timchurches.github.io/blog/))
+- Tim Churches with scientist at South Western Sydney Clinical School, UNSW 
+Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, 
+Australia. ( [link](https://swscs.med.unsw.edu.au) and his 
+work [here](https://timchurches.github.io/blog/))
 
 This report is published under creative common CC BY-SA, and code should be
 GPL 3.0
@@ -472,6 +475,11 @@ france_official_emergency_dep_codebook_url <- "https://www.data.gouv.fr/fr/datas
 france_official_emergency_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
 france_official_emergency_reg_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/02c99d99-96a0-4953-8e30-04fd660530f6"
 
+france_official_emergency_total_url <- "https://www.data.gouv.fr/fr/datasets/r/219427ba-7e90-4eb1-9ac7-4de2e7e2112c"
+france_official_emergency_total_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/0289e4fe-bb67-42b9-a320-cd22c98d82c3"
+
+
+
 france_age_categories_url <- "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6"
 
 france_regions_url <- "https://data.opendatasoft.com/explore/dataset/contours-geographiques-tres-simplifies-des-regions-2019@ofgl-opendatamef/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
@@ -523,7 +531,7 @@ france_age_categories %>%
 
 
 
-### Data per department (extract)
+### Data per department
 
 
 ```{r}
@@ -543,7 +551,7 @@ france_official_emergency_dep <- data.table::as.data.table(merge(
 
 
 ```{r viewHospitalDataPerERDep}
-DT::datatable(france_official_emergency_dep[1:100]
+DT::datatable(tail(france_official_emergency_dep,100)
               #, extensions = 'FixedColumns'
               , filter = 'top'
               , class = 'cell-border stripe'
@@ -555,7 +563,7 @@ DT::datatable(france_official_emergency_dep[1:100]
 ```
 
 
-### Data per regions (extract)
+### Data per regions
 
 
 ```{r}
@@ -579,7 +587,7 @@ france_official_emergency_reg <- merge(
 
 
 ```{r viewHospitalDataERPerReg}
-DT::datatable(france_official_emergency_reg[1:100]
+DT::datatable(tail(france_official_emergency_reg,100)
               #, extensions = 'FixedColumns'
               , filter = 'top'
               , class = 'cell-border stripe'
@@ -590,6 +598,32 @@ DT::datatable(france_official_emergency_reg[1:100]
 )
 ```
 
+
+
+### Data for France
+
+
+```{r}
+france_official_emergency_total <- read.csv(file = france_official_emergency_total_url, sep = ",", stringsAsFactors = TRUE) %>%
+  mutate(
+    date = as.Date(date_de_passage)
+  ) %>%
+  data.table::as.data.table()
+```
+
+
+
+```{r viewHospitalDataERTotal}
+DT::datatable(tail(france_official_emergency_total,100)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
 
 
 
@@ -621,6 +655,9 @@ opencovid_fr <- read.csv(opencovid_fr_url)
 
 
 # Analysis of Hospital Data
+
+
+Latest available data are from : `r max(france_official_hospital_dep$date)`
 
 
 ```{r smallMultipleHostpital}
@@ -1130,6 +1167,8 @@ icu <- plotLogGrowth(
 
 # Analysis of Emergency Data
 
+Latest available data are from : `r max(france_official_emergency_dep$date)`
+
 ## France per departments {.tabset  .tabset-fade .tabset-pills}
 
 ### Total ER daily visits
@@ -1156,6 +1195,21 @@ h <- plotSmallMultipleCovid(
 )
 h
 ```
+
+
+
+### Daily hospitalization for COVID-19
+
+```{r plotHospCoviddep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h
+```
+
 
 
 
@@ -1197,32 +1251,42 @@ sos
 idf_er_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_pass_tot"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Ile de France - Emergency "
 )
 idf_er_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_pass_corona"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Ile de France - Emergency "
 )
 idf_er_hosp <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_hospit_corona"
-  , colfeature = "dep"
+  , colfeature = "dep_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Ile de France - Emergency "
 )
 idf_sos_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_acte_tot"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Ile de France - SOS "
 )
 idf_sos_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_acte_corona"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Ile de France - SOS "
 )
 
 
@@ -1237,33 +1301,43 @@ idf_sos_coro <- plotSmallMultipleCovid(
 idf_er_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
   , myvariable = "nbre_pass_tot"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Grand Est - Emergency "
 )
 idf_er_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
   , myvariable = "nbre_pass_corona"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Grand Est - Emergency "
 )
 idf_er_hosp <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
   , myvariable = "nbre_hospit_corona"
-  , colfeature = "dep"
+  , colfeature = "dep_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Grand Est - Emergency "
 )
 
 idf_sos_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
   , myvariable = "nbre_acte_tot"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Grand Est - SOS "
 )
 idf_sos_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
   , myvariable = "nbre_acte_corona"
-  , colfeature = "dep"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
   , ncol = 3
+  , mytitle_base = "Grand Est - SOS "
 )
 
 ( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro)
@@ -1271,4 +1345,62 @@ idf_sos_coro <- plotSmallMultipleCovid(
 ```
 
 ## France per regions (soon) {.tabset  .tabset-fade .tabset-pills}
+
+
+
+
+
+
+## France Total
+
+
+
+```{r plotErFT}
+fra_er_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "fra"
+  , facetfeature = "fra"
+  , ncol = 3
+  , mytitle_base = "France - Emergency "
+)
+fra_er_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "fra"
+  , facetfeature = "fra"
+  , ncol = 3
+  , mytitle_base = "France - Emergency "
+)
+fra_er_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "sursaud_cl_age_corona"
+  , facetfeature = "fra"
+  , ncol = 3
+  , mytitle_base = "France - Emergency "
+)
+
+fra_sos_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "fra"
+  , facetfeature = "fra"
+  , ncol = 3
+  , mytitle_base = "France - SOS "
+)
+fra_sos_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "fra"
+  , facetfeature = "fra"
+  , ncol = 3
+  , mytitle_base = "France - SOS "
+)
+
+( fra_er_tot + fra_er_coro ) / fra_er_hosp / ( fra_sos_tot + fra_sos_coro)
+```
+
+
+
 
