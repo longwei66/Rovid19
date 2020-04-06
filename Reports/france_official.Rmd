@@ -313,6 +313,8 @@ france_official_hospital_dep_codebook_url <- "https://www.data.gouv.fr/fr/datase
 france_region_departements_url <- "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
 ```
 
+Autres data - mortalité
+https://www.insee.fr/fr/information/4470857#tableau-figure2_radio1
 
 
 ### Data Struture
@@ -628,30 +630,173 @@ DT::datatable(tail(france_official_emergency_total,100)
 
 
 
-## Covid positive cases {.tabset .tabset-face .tabset-pills}
+## Covid tests data {.tabset .tabset-face .tabset-pills}
 
-### Data sources
+This covers test data for tests done in city laboratory per department and age
+range.
 
-```{r}
-opencovid_fr_url <- "https://raw.githubusercontent.com/opencovid19-fr/data/master/dist/chiffres-cles.csv"
+### Data Sources
+
+
+Since Monday April 6th, French government is publishing data for tests network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+> Le présent jeu de données renseigne sur le nombre de tests de dépistage du 
+> COVID-19 réalisés par les laboratoires de villes, par département et par sexe :
+
+> Nombre de tests réalisés ;
+> Nombre de tests positifs.
+> Un fichier quotidien et un fichier hebdomadaire sont proposés.
+
+> Mode de production des données
+> Le système de surveillance, appelé 3labos, repose sur la remontée automatisée 
+> des données individuelles de trois laboratoires centralisateurs de 
+> prélèvements (France métropolitaine et DOM) : Eurofins Biomnis et Cerba. Les 
+> objectifs de ce système de surveillance sont le suivi des tendances 
+> temporo-spatiales de maladies infectieuses ciblées, la contribution à 
+> l’investigation d’épidémies et l’apport de données complémentaires aux 
+> systèmes de surveillance existants.
+
+> Dans le cadre de l'épidémie de COVID-19, des données sont transmises 
+> quotidiennement et incluent le résultat biologique (réalisé par PCR), l’âge, 
+> le sexe et le département du patient ou du laboratoire préleveur.
+
+> Les données sont transmises quotidiennement à Santé publique France, avec un 
+> certain délai entre la date de prélèvement et la réalisation du test. Ces 
+> délais comprennent le temps d’acheminement de l’échantillon, la réalisation 
+> du test, le traitement administratif du dossier et son enregistrement dans 
+> le système d’information.
+
+> Éléments d'attention
+> Le fichier mis à disposition contient uniquement les tests réalisés par les 
+> laboratoires de ville. Il ne recense pas l’ensemble des tests réalisés en France.
+
+```{r sourceUriTests}
+france_official_tests_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20"
+france_official_tests_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e"
 ```
-
-
-Complementary data with cumulative number of cases. This information
-is not present in hospital data.
-
-```{r}
-opencovid_fr <- read.csv(opencovid_fr_url)
-```
-
 
 
 ### Data Structure
 
-### Data per department
+Dataset per departments :
 
-### Data per regions
+```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
+france_official_tests_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_tests_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+#mynames <- as.character(france_official_tests_dep_codebook[1])
+#setnames(france_official_tests_dep_codebook, unlist(mynames))
 
+france_official_tests_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We import these data and merge associate department with their Region names
+
+```{r}
+france_official_tests_dep <- data.table::as.data.table(read.csv(file = france_official_tests_dep_url, sep = ";"))
+france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
+france_official_tests_dep %>% 
+  rename(
+    department = dep
+    , date = jour
+  ) %>%
+  mutate(
+    date = as.Date(date)
+  )-> france_official_tests_dep
+
+france_official_tests_dep <- data.table::as.data.table(merge(
+  france_official_tests_dep
+  , france_region_departements
+  , by.x = "department"
+  , by.y = "num_dep"
+))
+```
+
+
+### Data per department (latest)
+
+```{r viewTestslDataPerDep}
+DT::datatable(tail(france_official_tests_dep, 200)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+### Data per regions (latest)
+
+We combine now department data per region.
+
+```{r agregateTestsPerRegion}
+france_official_tests_dep %>%
+  group_by(region_name,date,clage_covid) %>%
+  summarise(
+    nb_test = sum(nb_test, na.rm=TRUE)
+    , nb_pos = sum(nb_pos, na.rm = TRUE)
+    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
+    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
+    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
+    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_tests_reg
+```
+
+
+
+```{r viewTestsDataPerRegion}
+DT::datatable(france_official_tests_reg
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+### Data for France (latest)
+
+We combine now for whole France.
+
+```{r agregateTestTotal}
+france_official_tests_dep %>%
+  group_by(date,clage_covid) %>%
+  summarise(
+    nb_test = sum(nb_test, na.rm=TRUE)
+    , nb_pos = sum(nb_pos, na.rm = TRUE)
+    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
+    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
+    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
+    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_tests_total
+```
+
+
+
+```{r viewTestsDataPerTotal}
+DT::datatable(france_official_tests_total
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
 
 
 # Analysis of Hospital Data
@@ -1243,6 +1388,7 @@ sos <- plotSmallMultipleCovid(
 sos
 ```
 
+## France per regions {.tabset  .tabset-fade .tabset-pills}
 
 
 ### Zoom : Ile de France
@@ -1344,7 +1490,7 @@ idf_sos_coro <- plotSmallMultipleCovid(
 
 ```
 
-## France per regions (soon) {.tabset  .tabset-fade .tabset-pills}
+
 
 
 
@@ -1404,3 +1550,116 @@ fra_sos_coro <- plotSmallMultipleCovid(
 
 
 
+
+
+# Analysis of Tests Data
+
+Latest available data are from : `r max(france_official_tests_dep$date)`
+
+
+## France per departments {.tabset  .tabset-fade .tabset-pills}
+
+### Total daily tests
+
+```{r plotTestsTotdep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_dep[ clage_covid == "0" ]
+  , myvariable = "nb_test"
+  , colfeature = "region_name" 
+  , facetfeature = "department"
+)
+h
+```
+
+
+### Total positive tests
+
+```{r plotTestsTotdep2}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_dep[ clage_covid == "0" ]
+  , myvariable = "nb_pos"
+  , colfeature = "region_name" 
+  , facetfeature = "department"
+)
+h
+```
+
+
+### Zoom Ile-de-France
+
+```{r plotTestsTotdep3}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_dep[ clage_covid == "0" & region_name == "Île-de-France"]
+  , myvariable = "nb_test"
+  , colfeature = "department" 
+  , facetfeature = "department"
+  , ncol = 3
+)
+g <- plotSmallMultipleCovid(
+  my_data = france_official_tests_dep[ clage_covid == "0" & region_name == "Île-de-France"]
+  , myvariable = "nb_pos"
+  , colfeature = "department" 
+  , facetfeature = "department"
+  , ncol = 3
+)
+
+h / g
+
+```
+
+
+## France per regions {.tabset  .tabset-fade .tabset-pills}
+
+### Total daily tests
+
+```{r plotTestsTotreg}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_reg[ clage_covid == "0" ]
+  , myvariable = "nb_test"
+  , colfeature = "region_name" 
+  , facetfeature = "region_name"
+)
+h
+```
+
+
+### Total positive tests
+
+```{r plotTestsTotreg2}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_reg[ clage_covid == "0" ]
+  , myvariable = "nb_pos"
+  , colfeature = "region_name" 
+  , facetfeature = "region_name"
+)
+h
+```
+
+
+
+## France total {.tabset  .tabset-fade .tabset-pills}
+
+### Total daily tests
+
+```{r plotTestsTotreg3}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_total[ clage_covid == "0" ]
+  , myvariable = "nb_test"
+  , colfeature = "clage_covid" 
+  , facetfeature = "clage_covid"
+)
+h
+```
+
+
+### Total positive tests
+
+```{r plotTestsTotreg4}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_tests_total[ clage_covid == "0" ]
+  , myvariable = "nb_pos"
+  , colfeature = "clage_covid" 
+  , facetfeature = "clage_covid"
+)
+h
+```
