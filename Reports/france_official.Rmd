@@ -27,6 +27,8 @@ library(data.table)
 library(kableExtra)
 library(DT)
 library(RColorBrewer)
+library(ggplot2)
+library(gghighlight)
 library(plotly)
 library(patchwork)
 library(shadowtext)
@@ -1057,7 +1059,7 @@ dcd <- plotSmallMultipleCovid(
   , mytitle_base = "France  : "
 )
 
-( hosp + home ) / ( icu + dcd)
+( hosp + home ) / ( icu + dcd) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 ```
 
 
@@ -1219,7 +1221,7 @@ icu <- plotLogGrowth(
   , start_case = 100
   , myvariable = "icu_now" #death_cum"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph ) + 
+(home$graph | hosp$graph) / ( icu$graph | death$graph + gghighlight(department %in% c(75,92)) ) + 
   plot_annotation(
     title = "Covid-19 France Hospital data by departments"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
@@ -1436,7 +1438,7 @@ idf_sos_coro <- plotSmallMultipleCovid(
 )
 
 
-( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro)
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
 
@@ -1486,7 +1488,7 @@ idf_sos_coro <- plotSmallMultipleCovid(
   , mytitle_base = "Grand Est - SOS "
 )
 
-( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro)
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
 
@@ -1544,7 +1546,7 @@ fra_sos_coro <- plotSmallMultipleCovid(
   , mytitle_base = "France - SOS "
 )
 
-( fra_er_tot + fra_er_coro ) / fra_er_hosp / ( fra_sos_tot + fra_sos_coro)
+( fra_er_tot + fra_er_coro ) / fra_er_hosp / ( fra_sos_tot + fra_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 ```
 
 
