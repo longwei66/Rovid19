@@ -801,6 +801,10 @@ DT::datatable(france_official_tests_total
 ```
 
 
+
+
+
+
 # Analysis of Hospital Data
 
 
@@ -951,10 +955,43 @@ idf_icu <- plotSmallMultipleCovid(
 )
 
 
-( idf_home + idf_hosp ) / ( idf_icu + idf_dead)
+( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
 
+
+### Zoom : 92 - Hauts-de-Seine
+
+```{r plotId92fHosp}
+idf_home <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  , myvariable = "back_home_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  , myvariable = "hospitalized_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_dead <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  , myvariable = "death_cum"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_icu <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  , myvariable = "icu_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+
+
+( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+
+```
 
 
 
@@ -1051,7 +1088,7 @@ icu <- plotSmallMultipleCovid(
 
 
 dcd <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_total[ sex == 0 ]
+  my_data = france_official_hospital_total[ sex == 0 | TRUE ]
   , myvariable = "death_cum"
   , colfeature = "sex"
   , facetfeature = "sex"
@@ -1441,6 +1478,60 @@ idf_sos_coro <- plotSmallMultipleCovid(
 ( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
+
+
+
+### Zoom : Ile de France - 92
+
+```{r plotIdfER92}
+idf_er_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & dep == "92"]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Ile de France 92 - Emergency "
+)
+idf_er_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "92"]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Ile de France 92 - Emergency "
+)
+idf_er_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "92"]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "dep_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Ile de France 92 - Emergency "
+)
+idf_sos_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "92"]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Ile de France 92 - SOS "
+)
+idf_sos_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "92"]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Ile de France 92 - SOS "
+)
+
+
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+
+```
+
+
+
 
 
 ### Zoom : Grand Est
