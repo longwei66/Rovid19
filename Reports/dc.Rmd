@@ -1,0 +1,390 @@
+---
+title: "Mortality in France, major events"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
+library(data.table)
+library(dplyr)
+library(geojsonio) # require protonlite install deb : libprotobuf-dev
+library(geojsonsf)
+library(mapproj)
+library(kableExtra)
+# Need a recent version of V8
+# https://github.com/jeroen/V8
+# Ubuntu Xenial (16.04) and Bionic (18.04) only
+# sudo add-apt-repository ppa:cran/v8
+# sudo apt-get update
+# sudo apt-get install libnode-dev
+devtools::install_github("jeroen/V8")
+library(rmapshaper)
+library(broom)
+library(ggplot2)
+library(ggthemes)
+```
+
+
+
+# Introduction
+
+The purpose of this article is to analyse mortality in France over time and
+over french territory.
+
+This work was inspired by several articles (see references section) and tweets.
+
+The main one being the tweet of @coulmont comparing the current impact of 
+covid-19 on french mortality and the 2003 heatwave which killed 14k people.
+
+<center>
+<blockquote class="twitter-tweet"><p lang="fr" dir="ltr">Le &quot;pic&quot; était moins élevé en 2020 qu&#39;en 2003, mais l&#39;aire sous la courbe (c&#39;est à dire les décès en plus de la moyenne) sont déjà deux fois plus nombreux... <a href="https://t.co/r0gImxUkTj">pic.twitter.com/r0gImxUkTj</a></p>&mdash; coulmont (@coulmont) <a href="https://twitter.com/coulmont/status/1256134197217046528?ref_src=twsrc%5Etfw">May 1, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
+
+The second one is from @jburnmurdoch and compares trend accross countries.
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">NEW: a lot of data on reported Covid deaths is highly suspect, so we’ve been looking into excess mortality — how many more people than usual have been dying around the world in recent weeks?<br><br>Story by me, <a href="https://twitter.com/ChrisGiles_?ref_src=twsrc%5Etfw">@ChrisGiles_</a> &amp; <a href="https://twitter.com/valentinaromei?ref_src=twsrc%5Etfw">@valentinaromei</a> (free to read): <a href="https://t.co/EiE5Q3OSmR">https://t.co/EiE5Q3OSmR</a> <a href="https://t.co/AiTdBnBma9">pic.twitter.com/AiTdBnBma9</a></p>&mdash; John Burn-Murdoch (@jburnmurdoch) <a href="https://twitter.com/jburnmurdoch/status/1254461123753054209?ref_src=twsrc%5Etfw">April 26, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+We will complement this time view by geographical view, visualizing the spatial
+spread of mortality overtime.
+
+# Get & clean data
+
+## Data sources {.tabset .tabset-face .tabset-pills}
+
+We will use three sources of data
+
+
+- Latest official death data from french statistical bureau (https://insee.fr)
+for 2020.
+- Historical official death data gathered by Christian Quest from
+https://data.cquest.org (this file is a 1.9 GB csv with 25 million lines)
+- as the data above are quite granular (individual death) and associated to 
+insee code of the place when death happened, we need the mappig between insee
+code and postal codes.
+- finally, to map data, we need France spacial shapefile at city level.
+
+```{r dataSources}
+# 64Mo csv file
+insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
+# 1.9Mo csv file 
+insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4470857/2020-04-30_detail.zip"
+# France shapefile from data.gouv.fr
+france_sp_url <- "https://data.datapleth.io/ext/france/spatial/communes-simple/communes-20190101.json"
+# France insee code, zip code mapping
+france_insee_zip_url <- "https://www.data.gouv.fr/en/datasets/r/6d3428b2-3893-45a1-b404-2522a4e77d41"
+```
+
+
+## Get data
+
+### France shapefile
+
+```{r loadFranceShapeFile}
+## let's read directly the file
+france_communes <- geojsonio::geojson_read(france_sp_url,  what = "sp")
+```
+
+This dataset contains communes (county ?) shapefiles as well as some metadata
+
+```{r exampleFranceShapeData}
+head(france_communes@data) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+
+This data contains as well french caribeans and other oversea territories which
+can be filtered out as a preliminary approach.
+
+```{r removeFranceShapeDOMTOM}
+communes_lim <- france_communes[ ! substr(france_communes@data$insee,1,2)  %in% c(
+    "97","98","99"
+    ), ]
+```
+
+
+The dataset we obtain is quite large, as we are going to plot the whole France 
+on a single map, we don’t need such resolution in the limits of communes. Thus 
+we simplify the polygons with a specific algorithm.
+
+```{r simplifyShapeFile}
+communes_lim <- rmapshaper::ms_simplify(communes_lim, keep = 0.01)
+```
+
+
+Let's plot France map with communes subdivisions. We need first to convert
+geosjon in dataframe to be used by ggplot.
+
+```{r FranceSimplifiedCommunes}
+# Fortify the data AND keep trace of the commune code.
+# communes_lim_fortified <- broom::tidy(communes_lim, region = "insee")
+# broom tidy is hanging
+communes_lim_fortified <- fortify(communes_lim, region = "insee")
+
+```
+
+```{r}
+# Now I can plot this shape easily as described before:
+ggplot() +
+  geom_polygon(data = communes_lim_fortified, 
+               aes( x = long, y = lat, group = group),
+               fill="white", 
+               color="grey", size = 0.2
+               ) +
+  coord_map() +
+  theme_tufte() +
+  theme(
+    axis.line=element_blank()
+    , axis.text=element_blank()
+    , axis.ticks=element_blank()
+    , axis.title=element_blank()
+    ) +
+  ggtitle("France Subdivisions - Communes")
+```
+
+
+
+### 2020 Deaths from Insee
+
+```{r getInsee2020}
+insee_dcd_file <- "../data/DC_jan2018-avr2020_det.csv"
+dcd_2020 <- fread(insee_dcd_file)
+```
+
+```{r}
+head(dcd_2020) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We map these data using same names as historical data (see later section)
+
+```{r}
+dcd_2020_clean <- dcd_2020[ , ':=' (
+    sexe = SEXE
+    , code_lieu_deces = COMDEC
+    , date_deces = as.Date(paste0(ADEC,"-",MDEC,"-",JDEC))
+    , date_naissance = as.Date(paste0(ANAIS,"-",MNAIS,"-",JNAIS))
+  )]
+dcd_2020_clean[ , c(
+  "DEPDOM", "ADEC", "MDEC", "JDEC", "DEPDEC", "ANAIS", "MNAIS", "JNAIS", "SEXE",
+  "COMDEC"
+  , "LIEUDEC2" # could be interesting in a later stage
+  ) := NULL ]
+dcd_2020_clean[ sexe == "F", sexe := "2" ]
+dcd_2020_clean[ sexe == "M", sexe := "1" ]
+dcd_2020_clean[ , sexe := as.numeric(sexe)]
+  
+```
+
+
+Compute daily death.
+
+```{r}
+daily_death_2020 <- dcd_2020_clean[ , .N, by = date_deces ]
+```
+
+
+```{r}
+g <- ggplot(data = daily_death_2020[ date_deces >= as.Date("2020-01-01")])
+g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g
+```
+
+
+
+
+### 2019 Deaths from Insee
+
+```{r getInsee2019}
+insee_dcd_file <- "../data/deces-2019.csv"
+dcd_2019 <- fread(insee_dcd_file)
+```
+
+```{r}
+dcd_2019_clean <- dcd_2019[ , ':=' (
+    code_lieu_deces = lieudeces
+    , date_deces = anytime::anydate(datedeces)
+    , date_naissance = anytime::anydate(datenaiss)
+  )]
+dcd_2019_clean[ , c(
+  "nomprenom", "lieudeces", "lieunaiss", "datedeces", "datenaiss", "commnaiss", "paysnaiss", "actedeces"
+  ) := NULL ]
+```
+
+
+Compute daily death.
+
+```{r}
+daily_death_2019 <- dcd_2019_clean[ , .N, by = date_deces ]
+```
+
+
+```{r}
+g <- ggplot(data = daily_death_2019[ date_deces > as.Date("2019-01-01")])
+g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g
+```
+
+
+### 2019 & 2020
+
+
+
+```{r}
+dcd_all_clean2 <- rbindlist(list(
+  dcd_2019_clean[date_deces < "2019-12-01"]
+  , dcd_2020_clean[date_deces >= "2019-12-01"]
+  )
+  )
+daily_death_2019_2020 <- dcd_all_clean2[ , .N, by = date_deces ]
+
+g <- ggplot(data = daily_death_2019_2020[ date_deces > as.Date("2019-01-01")])
+g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g
+```
+
+
+
+
+
+### Historical Deaths from Insee
+
+```{r}
+#dcd_remote_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
+#download.file(dcd_remote_url,destfile="./data/insee_deces.csv.gz")
+dcd_url <- "../data/insee_deces.csv"
+dcd_all <- data.table::fread(file = dcd_url)
+```
+
+```{r}
+head(dcd_all) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+We remove unused variable for the data to be merged with previous dataset and
+convert dates.
+
+```{r}
+dcd_all_clean <- dcd_all[ , .(sexe, code_lieu_deces, date_deces, date_naissance)]
+dcd_all_clean[ , ':=' (
+  date_deces = as.Date(date_deces)
+  , date_naissance = as.Date(date_naissance)
+)]
+```
+
+Now we merge with recent data (removing recent months)
+
+```{r}
+dcd_all_clean <- rbindlist(
+  list(
+    dcd_all_clean[ date_deces < "2019-12-01"]
+    , dcd_2020_clean[ date_deces >= "2019-12-01"]
+    )
+  )
+```
+
+
+
+Explore Paris historical data
+
+
+```{r}
+daily_death <- dcd_all_clean[ , .N, by = date_deces ]
+```
+
+
+```{r}
+g <- ggplot(data = daily_death[ date_deces > as.Date("2000-01-01")])
+g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g
+```
+
+
+## Create summarized data
+
+### total of death per day and insee_code (county/city)
+
+```{r}
+dcd_by_code <- dcd[ , .(count = .N), by = .(code_lieu_deces,date_deces) ]
+# convert to date
+dcd_by_code[ , date_deces := as.Date (date_deces)]
+```
+
+Add day of year
+
+```{r}
+dcd_by_code[ , ':=' (
+    year = year(date_deces)
+    , dayofyear = as.numeric(strftime(date_deces, format = "%j"))
+    , common_date = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
+    )
+    ]
+```
+
+
+
+```{r}
+dcd_by_code92 <- dcd_by_code[ grep(pattern = "^75[0-9]{3}$", x = code_lieu_deces) ]
+dcd_by_code92_s <- dcd_by_code92[ , .( sum_c = sum(count) ) , by = .(year,common_date)] 
+
+```
+
+
+```{r}
+library(gghighlight)
+g <- ggplot(data = dcd_by_code92_s, group = year)
+g <- g + geom_line(mapping = aes(x = common_date, y = sum_c, col = as.factor(year)), size = 0.5)
+g <- g + gghighlight(year %in% c(2020,2003,1989,1990, 1994, 1997))
+g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
+g <- g + ggtitle("Mortalité quotidienne par année - code insee 92*** ")
+g <- g + xlab("Jour") + ylab("nb de décès")
+g <- g + theme_minimal()
+g
+```
+
+
+### total of death per day for france
+
+```{r}
+dcd_france <- dcd[ , .(count = .N), by = .(date_deces) ]
+# convert to date
+dcd_france[ , date_deces := as.Date (date_deces)]
+```
+
+Add day of year
+
+```{r}
+dcd_france[ , ':=' (
+    year = year(date_deces)
+    , dayofyear = as.numeric(strftime(date_deces, format = "%j"))
+    )
+    ]
+```
+
+
+
+```{r}
+library(gghighlight)
+g <- ggplot(data = dcd_france, group = year)
+g <- g + geom_line(mapping = aes(x = dayofyear, y = count, col = as.factor(year)), size = 0.5)
+g <- g + gghighlight(year %in% c(2020,2003,1989,1990))
+g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
+g <- g + xlab("# jour") + ylab("nb de décès")
+g <- g + theme_minimal()
+g
+```
+
+
+
+
+# References
+
+
+https://freakonometrics.hypotheses.org/60845
