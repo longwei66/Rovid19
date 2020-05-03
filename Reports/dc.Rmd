@@ -146,9 +146,10 @@ ggplot() +
   ggtitle("France Subdivisions - Communes")
 ```
 
+### Death data
 
 
-### 2020 Deaths from Insee
+#### 2020 Deaths from Insee
 
 ```{r getInsee2020}
 insee_dcd_file <- "../data/DC_jan2018-avr2020_det.csv"
@@ -198,7 +199,7 @@ g
 
 
 
-### 2019 Deaths from Insee
+#### 2019 Deaths from Insee
 
 ```{r getInsee2019}
 insee_dcd_file <- "../data/deces-2019.csv"
@@ -231,7 +232,7 @@ g
 ```
 
 
-### 2019 & 2020
+#### 2019 & 2020
 
 
 
@@ -252,7 +253,7 @@ g
 
 
 
-### Historical Deaths from Insee
+#### Historical Deaths from Insee
 
 ```{r}
 #dcd_remote_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
@@ -279,6 +280,8 @@ dcd_all_clean[ , ':=' (
 )]
 ```
 
+#### Final dataset
+
 Now we merge with recent data (removing recent months)
 
 ```{r}
@@ -291,8 +294,7 @@ dcd_all_clean <- rbindlist(
 ```
 
 
-
-Explore Paris historical data
+#### Explore historical data
 
 
 ```{r}
@@ -304,6 +306,28 @@ daily_death <- dcd_all_clean[ , .N, by = date_deces ]
 g <- ggplot(data = daily_death[ date_deces > as.Date("2000-01-01")])
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
 g
+```
+
+
+### Insee code mapping
+
+
+```{r}
+insee_mapping <- as.data.table(read.csv(file = france_insee_zip_url, sep = ";"))
+insee_mapping <- insee_mapping[ , .(
+  Code.INSEE, Code.Postal, 
+  #Commune, 
+  Département, Région,
+  #Population,
+  Code.Département 
+)]
+```
+
+
+```{r}
+head(insee_mapping) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
 
