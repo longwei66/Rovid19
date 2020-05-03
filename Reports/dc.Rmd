@@ -303,17 +303,33 @@ daily_death <- dcd_all_clean[ , .N, by = date_deces ]
 
 
 ```{r}
-g <- ggplot(data = daily_death[ date_deces > as.Date("2000-01-01")])
+g <- ggplot(data = daily_death[ 
+  #date_deces > as.Date("2000-01-01")
+  ])
+g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g
+```
+
+```{r}
+g <- ggplot(data = daily_death[ 
+  date_deces > as.Date("1972-01-01")
+  ])
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
 g
 ```
 
 
-### Insee code mapping
 
+
+### Insee code mapping (Ilde de France)
+
+We have only mapping for Ile de France, need to look for whole France.
 
 ```{r}
-insee_mapping <- as.data.table(read.csv(file = france_insee_zip_url, sep = ";"))
+insee_mapping <- as.data.table(read.csv(file = france_insee_zip_url, sep = ";", stringsAsFactors = FALSE))
+```
+
+```{r}
 insee_mapping <- insee_mapping[ , .(
   Code.INSEE, Code.Postal, 
   #Commune, 
@@ -321,7 +337,23 @@ insee_mapping <- insee_mapping[ , .(
   #Population,
   Code.Département 
 )]
+setnames(insee_mapping, c(
+  "code_insee"
+  , "code_postal"
+  , "departement_name"
+  , "region_name"
+  , "code_departement"
+))
 ```
+
+Update variable types
+
+```{r}
+insee_mapping[ , ':=' (
+  code_insee = as.character(code_insee)
+)]
+```
+
 
 
 ```{r}
@@ -336,9 +368,10 @@ head(insee_mapping) %>%
 ### total of death per day and insee_code (county/city)
 
 ```{r}
-dcd_by_code <- dcd[ , .(count = .N), by = .(code_lieu_deces,date_deces) ]
+dcd_by_code <- copy(dcd_all_clean)
+dcd_by_code <- dcd_by_code[ , .(count = .N), by = .(code_lieu_deces,date_deces) ]
 # convert to date
-dcd_by_code[ , date_deces := as.Date (date_deces)]
+#dcd_by_code[ , date_deces := as.Date (date_deces)]
 ```
 
 Add day of year
@@ -352,20 +385,39 @@ dcd_by_code[ , ':=' (
     ]
 ```
 
-
+### Merge with insee mapping
 
 ```{r}
-dcd_by_code92 <- dcd_by_code[ grep(pattern = "^75[0-9]{3}$", x = code_lieu_deces) ]
-dcd_by_code92_s <- dcd_by_code92[ , .( sum_c = sum(count) ) , by = .(year,common_date)] 
+dcd_by_code <- merge(
+  x = dcd_by_code
+  , y = insee_mapping
+  , by.x = "code_lieu_deces"
+  , by.y = "code_insee"
+  )
+```
+
+```{r}
+head(dcd_by_code) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+
+#### Visualisation for Paris
+
+```{r}
+dcd_by_code_s <- dcd_by_code[ year > 1972 ]
+dcd_by_code_s <- dcd_by_code_s[ , .( sum_c = sum(count) ) , by = .(year,common_date)] 
 
 ```
 
 
 ```{r}
 library(gghighlight)
-g <- ggplot(data = dcd_by_code92_s, group = year)
+g <- ggplot(data = dcd_by_code_s, group = year)
 g <- g + geom_line(mapping = aes(x = common_date, y = sum_c, col = as.factor(year)), size = 0.5)
-g <- g + gghighlight(year %in% c(2020,2003,1989,1990, 1994, 1997))
+g <- g + gghighlight(year %in% c(2020,2003,1989, 1994, 1997,1970))
 g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
 g <- g + ggtitle("Mortalité quotidienne par année - code insee 92*** ")
 g <- g + xlab("Jour") + ylab("nb de décès")
@@ -374,37 +426,40 @@ g
 ```
 
 
-### total of death per day for france
+## Choropleth
 
 ```{r}
-dcd_france <- dcd[ , .(count = .N), by = .(date_deces) ]
-# convert to date
-dcd_france[ , date_deces := as.Date (date_deces)]
+communes_results <- merge(
+  x = dcd_by_code[ date_deces == "2020-04-01"]
+  , y = communes_lim_fortified
+  , by.x = "code_lieu_deces"
+  , by.y = "id"
+  , all.y = TRUE
+  , allow.cartesian=TRUE
+)
 ```
-
-Add day of year
 
 ```{r}
-dcd_france[ , ':=' (
-    year = year(date_deces)
-    , dayofyear = as.numeric(strftime(date_deces, format = "%j"))
-    )
-    ]
+p <- ggplot() +
+  geom_polygon(
+    data = communes_results, 
+    aes(fill = count, x = long, y = lat, group = group),
+    color="grey", size = 0.02
+  ) +
+  scale_fill_viridis_c(option = "A", direction = -1) +
+  #facet_wrap(facets = . ~ liste_shortname) +
+  coord_map() +
+  theme_tufte() +
+  theme(
+    axis.line=element_blank()
+    , axis.text=element_blank()
+    , axis.ticks=element_blank()
+    , axis.title=element_blank()
+    ) +
+  ggtitle("European election - 2019 - France") +
+  labs(fill = "nb_death")
+p
 ```
-
-
-
-```{r}
-library(gghighlight)
-g <- ggplot(data = dcd_france, group = year)
-g <- g + geom_line(mapping = aes(x = dayofyear, y = count, col = as.factor(year)), size = 0.5)
-g <- g + gghighlight(year %in% c(2020,2003,1989,1990))
-g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
-g <- g + xlab("# jour") + ylab("nb de décès")
-g <- g + theme_minimal()
-g
-```
-
 
 
 
