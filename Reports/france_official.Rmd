@@ -994,6 +994,40 @@ idf_icu <- plotSmallMultipleCovid(
 ```
 
 
+### Zoom : 46 - Lot
+
+```{r plotLot46Hosp}
+idf_home <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
+  , myvariable = "back_home_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
+  , myvariable = "hospitalized_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_dead <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
+  , myvariable = "death_cum"
+  , colfeature = "department"
+  , ncol = 3
+)
+idf_icu <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
+  , myvariable = "icu_now"
+  , colfeature = "department"
+  , ncol = 3
+)
+
+
+( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+
+```
+
+
 
 ## France per Regions {.tabset .tabset-fade  .tabset-pills}
 
@@ -1530,6 +1564,55 @@ idf_sos_coro <- plotSmallMultipleCovid(
 
 ```
 
+
+### Zoom : Lot - 46
+
+```{r plotLotER46}
+idf_er_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & dep == "46"]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Lot 46 - Emergency "
+)
+idf_er_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Lot 46 - Emergency "
+)
+idf_er_hosp <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "dep_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Lot 46 - Emergency "
+)
+idf_sos_tot <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Lot 46 - SOS "
+)
+idf_sos_coro <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Lot 46 - SOS "
+)
+
+
+( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+
+```
 
 
 
