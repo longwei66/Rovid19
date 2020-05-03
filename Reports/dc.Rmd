@@ -20,7 +20,7 @@ library(kableExtra)
 # sudo add-apt-repository ppa:cran/v8
 # sudo apt-get update
 # sudo apt-get install libnode-dev
-devtools::install_github("jeroen/V8")
+#devtools::install_github("jeroen/V8")
 library(rmapshaper)
 library(broom)
 library(ggplot2)
