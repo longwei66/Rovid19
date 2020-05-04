@@ -1,0 +1,142 @@
+---
+title: "Mortality in France, major events"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
+library(data.table)
+library(dplyr)
+library(kableExtra)
+```
+
+
+
+# Introduction
+
+The purpose of this report is to prepare a dataset containing France 
+communes information, especially their insee code and zip code as well as
+their department and regions.
+
+
+# Data sources
+
+In order to creat this dataset we will combine several sources. First from
+insee.fr we will get official communes, departements and region lists with 
+their insee codes and names ([insee.fr](https://www.insee.fr/fr/information/3720946) ).
+
+We will combine these data and add the official zip codes from La Poste (French
+Mail).
+
+```{r dataSources}
+# https://www.insee.fr/fr/statistiques/fichier/3720946/communes-01012019-csv.zip
+# https://www.insee.fr/fr/statistiques/fichier/3720946/departement2019-csv.zip
+# https://www.insee.fr/fr/statistiques/fichier/3720946/region2019-csv.zip
+# https://datanova.legroupe.laposte.fr/explore/dataset/laposte_hexasmal/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=%3B
+```
+
+
+# Get data
+
+```{r loadInseeMapping}
+communes_insee <- fread(file = "../data/communes-01012019.csv")
+departements_insee <- fread(file = "../data/departement2019.csv")
+regions_insee <- fread(file = "../data/region2019.csv")
+code_postaux <- fread(file = "../data/code_postaux.csv")
+```
+
+# Clean data 
+
+## Insee data
+
+We clean data from communes dataset. Basically, we removes communes which have
+a parent of same code and no departement mapping. These are kind of sub communes.
+
+```{r cleanCommunesInsee}
+communes_insee <- communes_insee[ ! (dep == "" & is.na(reg))]
+communes_insee[ , ':=' (
+  commune_type = typecom
+  , commune_insee_code = com
+  , commune_name = ncc
+  , commune_parent_insee_code = comparent
+)]
+communes_insee[ , 
+                c(
+                  "nccenr", "libelle", "can", 
+                  "tncc", "arr", "typecom", 
+                  "com", "ncc", "comparent"
+                  ) := NULL 
+                ]
+```
+
+
+```{r cleanDepartmentInsee}
+departements_insee[ , ':=' (
+  departement_name = ncc
+  , department_cheflieu_insee_code = cheflieu
+)]
+departements_insee[ , 
+                c(
+                  "nccenr", "libelle", "tncc", "ncc", "cheflieu"
+                  ) := NULL ]
+
+```
+
+```{r cleanRegionInsee}
+regions_insee[ , ':=' (
+  region_name = ncc
+  , region_cheflieu_insee_code = cheflieu
+)]
+regions_insee[ , 
+                c(
+                  "nccenr", "libelle", "tncc", "cheflieu", "ncc"
+                  ) := NULL ]
+
+```
+
+## Zip codes
+
+```{r cleanCodePostaux}
+code_postaux <- code_postaux[ , .(code_commune_insee, code_postal)]
+```
+
+# Merge datasets
+
+We merge these 4 datasets on a single. 
+
+```{r mapCommunesToDepartmentRegion}
+communes_mapping <- merge(x = communes_insee, y = departements_insee, by.x = c("dep","reg"), by.y = c("dep","reg"))
+communes_mapping <- merge(x = communes_mapping, y = regions_insee, by.x = "reg", by.y = "reg")
+communes_mapping <- merge(x = communes_mapping, y = code_postaux, by.x = "commune_insee_code", by.y = "code_commune_insee")
+communes_mapping[ , ':='(
+  region_insee_code = reg 
+  , departement_insee_code = dep
+)]
+communes_mapping[ , c("reg", "dep") := NULL]
+communes_mapping <- communes_mapping[ , .(
+  commune_insee_code, code_postal, commune_name, commune_parent_insee_code, commune_type,
+  departement_insee_code, departement_name, department_cheflieu_insee_code,
+  region_insee_code, region_name, region_cheflieu_insee_code
+)]
+```
+
+
+
+
+# Explore data
+
+```{r exampleFranceShapeData}
+head(communes_mapping) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Save data
+
+```{r}
+save(communes_mapping, file = "../data/clean/communes_mapping.Rda")
+```
+

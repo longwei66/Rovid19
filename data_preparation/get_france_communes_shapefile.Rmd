@@ -1,5 +1,5 @@
 ---
-title: "Mortality in France, major events"
+title: "Get France Communes geographic boundaries"
 output: html_document
 ---
     
@@ -8,17 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
-library(geojsonio) # require protonlite install deb : libprotobuf-dev
-
-
-
-library(geojsonsf)
-
-library(data.table)
-library(dplyr)
-
-library(mapproj)
 library(kableExtra)
+library(dplyr)
+library(geojsonio) # require protonlite install deb : libprotobuf-dev
 # Need a recent version of V8
 # https://github.com/jeroen/V8
 # Ubuntu Xenial (16.04) and Bionic (18.04) only
@@ -27,7 +19,6 @@ library(kableExtra)
 # sudo apt-get install libnode-dev
 #devtools::install_github("jeroen/V8")
 library(rmapshaper)
-library(broom)
 library(ggplot2)
 library(ggthemes)
 ```

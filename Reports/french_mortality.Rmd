@@ -1,0 +1,286 @@
+---
+title: "Mortality in France, major events"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
+library(data.table)
+library(dplyr)
+library(geojsonio) # require protonlite install deb : libprotobuf-dev
+library(geojsonsf)
+library(mapproj)
+library(kableExtra)
+# Need a recent version of V8
+# https://github.com/jeroen/V8
+# Ubuntu Xenial (16.04) and Bionic (18.04) only
+# sudo add-apt-repository ppa:cran/v8
+# sudo apt-get update
+# sudo apt-get install libnode-dev
+#devtools::install_github("jeroen/V8")
+library(rmapshaper)
+library(broom)
+library(ggplot2)
+library(ggthemes)
+```
+
+
+
+# Introduction
+
+The purpose of this article is to analyse mortality in France over time and
+over french territory.
+
+This work was inspired by several articles (see references section) and tweets.
+
+The main one being the tweet of @coulmont comparing the current impact of 
+covid-19 on french mortality and the 2003 heatwave which killed 14k people.
+
+<center>
+<blockquote class="twitter-tweet"><p lang="fr" dir="ltr">Le &quot;pic&quot; était moins élevé en 2020 qu&#39;en 2003, mais l&#39;aire sous la courbe (c&#39;est à dire les décès en plus de la moyenne) sont déjà deux fois plus nombreux... <a href="https://t.co/r0gImxUkTj">pic.twitter.com/r0gImxUkTj</a></p>&mdash; coulmont (@coulmont) <a href="https://twitter.com/coulmont/status/1256134197217046528?ref_src=twsrc%5Etfw">May 1, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
+
+The second one is from @jburnmurdoch and compares trend accross countries.
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">NEW: a lot of data on reported Covid deaths is highly suspect, so we’ve been looking into excess mortality — how many more people than usual have been dying around the world in recent weeks?<br><br>Story by me, <a href="https://twitter.com/ChrisGiles_?ref_src=twsrc%5Etfw">@ChrisGiles_</a> &amp; <a href="https://twitter.com/valentinaromei?ref_src=twsrc%5Etfw">@valentinaromei</a> (free to read): <a href="https://t.co/EiE5Q3OSmR">https://t.co/EiE5Q3OSmR</a> <a href="https://t.co/AiTdBnBma9">pic.twitter.com/AiTdBnBma9</a></p>&mdash; John Burn-Murdoch (@jburnmurdoch) <a href="https://twitter.com/jburnmurdoch/status/1254461123753054209?ref_src=twsrc%5Etfw">April 26, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+We will complement this time view by geographical view, visualizing the spatial
+spread of mortality overtime.
+
+# Get data {.tabset .tabset-face .tabset-pills}
+
+## Data sources
+
+We are combining three ressources :
+
+- Mortality daily data per communes. In another notebook we prepared a dataset
+combining latest official death data from french statistical bureau 
+(https://insee.fr) for 2020 with historical official death data gathered by 
+Christian Quest from https://data.cquest.org from insee.fr as well.
+- a spatial dataset containing the geographic borders of communes fortified as
+a data frame to be plotted with ggplot.
+- the list of all french communes with their insee codes and zip codes.
+
+
+## Load data
+
+We prepared in three separated notebook the datasets mentioned previously as
+this preparation is time consuming. For instance the historical death data
+contains 25 millions lines !
+
+```{r loadDataFromFolder}
+load(file = "../data/clean/communes_lim_fortified.Rda")
+load(file = "../data/clean/communes_mapping.Rda")
+load(file = "../data/clean/dcd_all_clean.Rda")
+```
+
+
+# Create summarized data
+
+## Total of death per day and insee_code (county/city)
+
+### Agregate per day
+
+```{r}
+dcd_by_code_daily <- copy(dcd_all_clean)
+dcd_by_code_daily <- dcd_by_code_daily[ , .(count = .N), by = .(code_lieu_deces,date_deces,year_death,month_death,week_death, dayofyear_death,common_date_death) ]
+```
+
+
+### Merge with insee mapping
+
+```{r}
+dcd_by_code_daily <- merge(
+  x = dcd_by_code_daily
+  , y = communes_mapping
+  , by.x = "code_lieu_deces"
+  , by.y = "commune_insee_code"
+  , allow.cartesian = TRUE
+  )
+```
+
+```{r}
+head(dcd_by_code_daily) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### Visualisation
+
+```{r}
+dcd_by_code_daily_s <- dcd_by_code_daily[ year_death > 1972 ]
+dcd_by_code_daily_s <- dcd_by_code_daily_s[ , .( sum_c = sum(count) ) , by = .(year_death,common_date_death)] 
+```
+
+
+```{r}
+library(gghighlight)
+g <- ggplot(data = dcd_by_code_daily_s, group = year_death)
+g <- g + geom_line(mapping = aes(x = common_date_death, y = sum_c, col = as.factor(year_death)), size = 0.5)
+g <- g + gghighlight(year_death %in% c(2020,2003,1989, 1994, 1997,1970))
+g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
+g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
+g <- g + xlab("Jour") + ylab("nb de décès")
+g <- g + theme_minimal()
+g
+```
+
+
+### Choropleth for a specific date
+
+```{r}
+communes_results <- merge(
+  x = dcd_by_code_daily[ date_deces == "2020-04-01" ]
+  , y = communes_lim_fortified
+  , by.x = "code_lieu_deces"
+  , by.y = "id"
+  , all.y = TRUE
+  , allow.cartesian=TRUE
+)
+```
+
+```{r}
+p <- ggplot() +
+  geom_polygon(
+    data = communes_results, 
+    aes(fill = count, x = long, y = lat, group = group),
+    color="grey", size = 0.02
+  ) +
+  scale_fill_viridis_c(option = "A", direction = -1) +
+  #facet_wrap(facets = . ~ liste_shortname) +
+  coord_map() +
+  theme_tufte() +
+  theme(
+    axis.line=element_blank()
+    , axis.text=element_blank()
+    , axis.ticks=element_blank()
+    , axis.title=element_blank()
+    ) +
+  ggtitle("Daily mortality - 2020-04-01 - France") +
+  labs(fill = "nb_death")
+p
+```
+
+
+
+
+## Total of death per week and insee_code (county/city)
+
+### Agregate per week
+
+```{r}
+dcd_by_code_weekly <- copy(dcd_all_clean)
+dcd_by_code_weekly <- dcd_by_code_weekly[ , .(count = .N), by = .(code_lieu_deces,week_death,year_death,month_death) ]
+```
+
+
+### Merge with insee mapping
+
+```{r}
+dcd_by_code_weekly <- merge(
+  x = dcd_by_code_weekly
+  , y = communes_mapping
+  , by.x = "code_lieu_deces"
+  , by.y = "commune_insee_code"
+  , allow.cartesian = TRUE
+  )
+```
+
+```{r}
+head(dcd_by_code_weekly) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+
+
+### Visualisation
+
+```{r}
+dcd_by_code_weekly_s <- dcd_by_code_weekly[ year_death > 1972 ]
+dcd_by_code_weekly_s <- dcd_by_code_weekly_s[ , .( sum_c = sum(count) ) , by = .(year_death,week_death)] 
+
+```
+
+
+```{r}
+library(gghighlight)
+g <- ggplot(data = dcd_by_code_weekly_s, group = year_death)
+g <- g + geom_line(mapping = aes(x = week_death, y = sum_c, col = as.factor(year_death)), size = 0.5)
+g <- g + gghighlight(year_death %in% c(2020,2003,1989, 1994, 1997,1970))
+#g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
+g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
+g <- g + xlab("Week") + ylab("nb de décès")
+g <- g + theme_minimal()
+g
+```
+
+
+### Choropleth for a specific week
+
+```{r}
+communes_results_w <- merge(
+  x = dcd_by_code_weekly[ week_death == 12]
+  , y = communes_lim_fortified
+  , by.x = "code_lieu_deces"
+  , by.y = "id"
+  , all.y = TRUE
+  , allow.cartesian=TRUE
+)
+```
+
+```{r}
+p <- ggplot() +
+  geom_polygon(
+    data = communes_results_w[ 
+      departement_insee_code %in% c(
+      "92","91","93", "94","95","78", "75"
+      # "69"
+      # , "69", "13","33","19"
+      ) 
+      # | TRUE
+      ], 
+    aes(fill = count, x = long, y = lat, group = group),
+    color="grey", size = 0.02
+  ) +
+  scale_fill_viridis_c(option = "A", direction = -1) +
+  #facet_wrap(facets = . ~ liste_shortname) +
+  coord_map() +
+  theme_tufte() +
+  theme(
+    axis.line=element_blank()
+    , axis.text=element_blank()
+    , axis.ticks=element_blank()
+    , axis.title=element_blank()
+    ) +
+  ggtitle("Weekly mortality - 2020 - Week 12 - France") +
+  labs(fill = "nb_death")
+p
+```
+
+
+
+
+# References
+
+## Inspirations 
+https://freakonometrics.hypotheses.org/60845
+
+## Data Sources
+
+
+```{r dataSources}
+# 64Mo csv file
+insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
+# 1.9Mo csv file 
+insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4470857/2020-04-30_detail.zip"
+# France shapefile from data.gouv.fr
+france_sp_url <- "https://data.datapleth.io/ext/france/spatial/communes-simple/communes-20190101.json"
+## Important to use this version to get communes inside Paris & Marseilles.
+france_geojson <- "https://github.com/gregoiredavid/france-geojson/raw/v2.0.2/communes.geojson"
+# France insee code, zip code mapping
+idf_insee_zip_url <- "https://www.data.gouv.fr/en/datasets/r/6d3428b2-3893-45a1-b404-2522a4e77d41"
+```
