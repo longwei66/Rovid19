@@ -33,6 +33,16 @@ library(plotly)
 library(patchwork)
 library(shadowtext)
 
+library(gt)
+library(deSolve)
+library(EpiEstim)
+library(incidence)
+library(distcrete)
+library(epitrix)
+library(projections)
+library(earlyR)
+library(distill)
+
 knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
 # Remove scientific notation
 options(scipen=999)
@@ -915,11 +925,12 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
+last_date <- "2020-05-10"
 ```
 
 
 
-```{r}
+```{r epidemicCurve}
 makeEpicurve <- function(my_data, my_ncol = 3){
   my_data %>%
     select(-cases) %>%
@@ -937,78 +948,31 @@ makeEpicurve <- function(my_data, my_ncol = 3){
 ```
 
 
+
+
+
+
+
 ```{r}
-makeEpicurve(
-  my_data = www_cases_daily[ country %in% c("Italy","France","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
-  )
-```
-
-
-
-
-
-
-
-
-
-
-
-```{r Cori_model_get_data_fr0, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
-plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirmed0) {
-  
-  confirmed_cases_fr <- mydata %>%
-    filter(Date <= last_date_fr) %>% 
-    filter(Date >= region_start_date) %>% 
-    filter(Region == region) %>%
-    filter(!is.na(incident_cases)) %>%
-    select(Date, incident_cases) %>%
-    rename(dates=Date,
-           I=incident_cases)
-  
-  estimate_R_obj <- estimate_R(confirmed_cases_fr,
-                               method="uncertain_si",
-                               config = make_config(list(
-                                 mean_si = 7.5, std_mean_si = 2.0,
-                                 min_mean_si = 1, max_mean_si = 8.4,
-                                 std_si = 3.4, std_std_si = 1.0,
-                                 min_std_si = 0.5, max_std_si = 4.0,
-                                 n1 = 1000, n2 = 1000)))
-  
-  plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", region))
-}
-
-
-prefectural_earlyR <- function(df, region, last_date, si_mean, si_sd) {
+prefectural_earlyR <- function(df, my_country, last_date, si_mean, si_sd) {
   df %>%
-    filter(Date <= last_date,
-           !is.na(incident_cases),
-           Region == region) %>%
-    select(Date, incident_cases) %>%
-    uncount(incident_cases) %>%
-    pull(Date) -> local_case_dates
+    filter(date <= last_date,
+           !is.na(daily_cases),
+           country == my_country) %>%
+    select(date, daily_cases) %>%
+    uncount(daily_cases) %>%
+    pull(date) -> local_case_dates
   
   local_case_dates %>%
     incidence(., last_date=last_date) -> local_cases
   
   res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
   res$local_case_dates <- local_case_dates
-  res$city <- region
+  res$city <- country
   res$last_date <- last_date
   res$si_mean <- si_mean
   res$si_sd <- si_sd
   return(res)
-}
-
-prefecture_plot_R <- function(res) {
-  plot(res, "R", main=paste("COVID-19 estimated R for", 
-                            res$region,
-                            "using data to",
-                            format(res$last_date, "%d %b %Y")),
-       sub=paste("(assuming serial interval mean =",
-                 res$si_mean, 
-                 ", sd =", 
-                 res$si_sd,")"),
-       bty="n")
 }
 
 prefecture_plot_lambda <- function(res) {
@@ -1025,17 +989,73 @@ prefecture_plot_lambda <- function(res) {
   points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
 }
 
-lambda_plot_fr <- function(region, mydata = french_regions_confirmed0) {
+lambda_plot <- function(my_country, mydata, my_date) {
   res_obj <- prefectural_earlyR(mydata, 
-                                region, 
-                                last_date_fr,
+                                my_country, 
+                                my_date,
                                 si_mean,
                                 si_sd)
   
   prefecture_plot_lambda(res_obj)
 }
-
 ```
+
+```{r} 
+lambda_plot("France", mydata = www_cases_daily, my_date = "2020-05-10")
+```
+
+
+
+
+
+
+```{r Cori_model_get_data_fr0, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
+plot_R <- function(my_country, start_date, last_date, mydata) {
+  
+  mydata <- mydata %>%
+    filter(date <= last_date) %>% 
+    filter(date >= start_date) %>% 
+    filter(country == my_country) %>%
+    filter(!is.na(daily_cases)) %>%
+    select(date, daily_cases) %>%
+    rename(dates=date,
+           I=daily_cases)
+  
+  estimate_R_obj <- estimate_R(mydata,
+                               method="uncertain_si",
+                               config = make_config(list(
+                                 mean_si = 7.5, std_mean_si = 2.0,
+                                 min_mean_si = 1, max_mean_si = 8.4,
+                                 std_si = 3.4, std_std_si = 1.0,
+                                 min_std_si = 0.5, max_std_si = 4.0,
+                                 n1 = 1000, n2 = 1000)))
+  
+  plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", my_country))
+}
+```
+
+
+
+### Epidemic curves
+
+```{r plotEpiCountries}
+makeEpicurve(
+  my_data = www_cases_daily[ country %in% c("Italy","France","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
+  )
+```
+
+
+
+```{r}
+plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-11", mydata = www_cases_daily)
+```
+
+
+
+```{r}
+plot_R(my_country = "US", start_date = "2020-02-28", last_date = "2020-05-11", mydata = www_cases_daily)
+```
+
 
 
 
