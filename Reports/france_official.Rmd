@@ -102,20 +102,21 @@ DT::datatable(
     dom = 't'
     , scrollX = TRUE
     , scrollCollapse = TRUE
-    )
+  )
 )
 ```
 
 #### Daily cases
 
-```{r getJHUCasesDaily, include=FALSE}}
+```{r getJHUCasesDaily, include=FALSE}
 www_cases_daily <- www_cases_cum %>%
   group_by(country) %>%
   arrange( cases ) %>%
   mutate(
-    valBack = c(cases[1], (cases - lag(cases))[-1])
+    daily_cases = c(cases[1], (cases - lag(cases))[-1])
   ) %>%
-  ungroup()
+  ungroup() %>%
+  as.data.table()
 ```
 
 
@@ -128,7 +129,7 @@ DT::datatable(
     dom = 't'
     , scrollX = TRUE
     , scrollCollapse = TRUE
-    )
+  )
 )
 ```
 
@@ -156,7 +157,7 @@ DT::datatable(
     dom = 't'
     , scrollX = TRUE
     , scrollCollapse = TRUE
-    )
+  )
 )
 ```
 
@@ -863,7 +864,7 @@ my_df %>%
       100, 200, 500, 1000, 2000, 5000, 10000,
       20000, 50000, 100000)
     
-    ) +
+  ) +
   # scale_y_continuous(expand = expand_scale(add = c(0,100))) +
   scale_x_continuous(expand = expand_scale(add = c(0,1))) +
   theme_minimal() +
@@ -898,6 +899,142 @@ my_df %>%
   labs(x = "Number of days since 10th death", y = "", subtitle = "Total number of cases")  -> g
 
 g
+```
+
+
+
+
+## Estimation of R0 {.tabset .tabset-fade .tabset-pills} 
+
+### Analysis functions
+
+We use the following epidemiologic parameters
+
+```{r}
+si_mean <- 5.0
+si_sd <- 3.4
+alt_si_mean <- 7.5
+alt_si_sd <- 3.4
+```
+
+
+
+```{r}
+makeEpicurve <- function(my_data, my_ncol = 3){
+  my_data %>%
+    select(-cases) %>%
+    ggplot() +
+    geom_bar(aes(x=date, y=daily_cases, fill = country), stat = "identity") +
+    facet_wrap(
+      facets = . ~ country
+      , ncol = my_ncol
+      , scales = "free_y"
+      ) +
+    labs(y="Incident cases", 
+         title=paste("COVID-19 incident daily cases", my_country)) +
+    theme(legend.position="top")
+}
+```
+
+
+```{r}
+makeEpicurve(
+  my_data = www_cases_daily[ country %in% c("Italy","France","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r Cori_model_get_data_fr0, echo=FALSE, tidy=TRUE, message=FALSE, eval=TRUE}
+plot_R_fr <- function(region, region_start_date, mydata = french_regions_confirmed0) {
+  
+  confirmed_cases_fr <- mydata %>%
+    filter(Date <= last_date_fr) %>% 
+    filter(Date >= region_start_date) %>% 
+    filter(Region == region) %>%
+    filter(!is.na(incident_cases)) %>%
+    select(Date, incident_cases) %>%
+    rename(dates=Date,
+           I=incident_cases)
+  
+  estimate_R_obj <- estimate_R(confirmed_cases_fr,
+                               method="uncertain_si",
+                               config = make_config(list(
+                                 mean_si = 7.5, std_mean_si = 2.0,
+                                 min_mean_si = 1, max_mean_si = 8.4,
+                                 std_si = 3.4, std_std_si = 1.0,
+                                 min_std_si = 0.5, max_std_si = 4.0,
+                                 n1 = 1000, n2 = 1000)))
+  
+  plot(estimate_R_obj, "R") + labs(title=paste("Instantaneous effective R - ", region))
+}
+
+
+prefectural_earlyR <- function(df, region, last_date, si_mean, si_sd) {
+  df %>%
+    filter(Date <= last_date,
+           !is.na(incident_cases),
+           Region == region) %>%
+    select(Date, incident_cases) %>%
+    uncount(incident_cases) %>%
+    pull(Date) -> local_case_dates
+  
+  local_case_dates %>%
+    incidence(., last_date=last_date) -> local_cases
+  
+  res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
+  res$local_case_dates <- local_case_dates
+  res$city <- region
+  res$last_date <- last_date
+  res$si_mean <- si_mean
+  res$si_sd <- si_sd
+  return(res)
+}
+
+prefecture_plot_R <- function(res) {
+  plot(res, "R", main=paste("COVID-19 estimated R for", 
+                            res$region,
+                            "using data to",
+                            format(res$last_date, "%d %b %Y")),
+       sub=paste("(assuming serial interval mean =",
+                 res$si_mean, 
+                 ", sd =", 
+                 res$si_sd,")"),
+       bty="n")
+}
+
+prefecture_plot_lambda <- function(res) {
+  plot(res, "lambdas", scale = length(res$local_case_dates) + 1,
+       bty="n")
+  title(sub=paste("\nEstimated", expression(lambda), "for", 
+                  res$region, 
+                  "(assuming serial interval mean =",
+                  res$si_mean, 
+                  ", sd =", 
+                  res$si_sd, ")"))
+  abline(v = res$local_case_dates, lwd = 3, col = "grey")
+  abline(v = res$last_date, col = "blue", lty = 2, lwd = 2)
+  points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
+}
+
+lambda_plot_fr <- function(region, mydata = french_regions_confirmed0) {
+  res_obj <- prefectural_earlyR(mydata, 
+                                region, 
+                                last_date_fr,
+                                si_mean,
+                                si_sd)
+  
+  prefecture_plot_lambda(res_obj)
+}
+
 ```
 
 
@@ -1283,7 +1420,7 @@ plotLogGrowth <- function(
     , "x2 every 2 days"
     , "x2 every 3 days"
     , "x2 every week"
-    )
+  )
   
   ## compute max x for growth rates displayed as reference
   max_x <- max(my_df$days_since_10) + 2
@@ -1368,7 +1505,7 @@ plotLogGrowth <- function(
 my_df <- france_official_hospital_dep[ 
   #region_name == "Île-de-France" &
   sex == 0
-  ] 
+] 
 
 home <- plotLogGrowth(
   mydata = my_df
@@ -1394,7 +1531,7 @@ icu <- plotLogGrowth(
   plot_annotation(
     title = "Covid-19 France Hospital data by departments"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
-    )
+  )
 ```
 
 
@@ -1404,7 +1541,7 @@ icu <- plotLogGrowth(
 my_df <- france_official_reg[ 
   #region_name == "Île-de-France" &
   sex == 0
-  ] 
+] 
 
 home <- plotLogGrowth(
   mydata = my_df
@@ -1434,7 +1571,7 @@ icu <- plotLogGrowth(
   plot_annotation(
     title = "Covid-19 France Hospital data by regions"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
-    )
+  )
 ```
 
 
@@ -1445,7 +1582,7 @@ icu <- plotLogGrowth(
 my_df <- france_official_hospital_total[ 
   #region_name == "Île-de-France" &
   sex == 0 | TRUE
-  ] 
+] 
 
 home <- plotLogGrowth(
   mydata = my_df
@@ -1475,7 +1612,7 @@ icu <- plotLogGrowth(
   plot_annotation(
     title = "Covid-19 France Hospital data by genre"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
-    )
+  )
 ```
 
 
