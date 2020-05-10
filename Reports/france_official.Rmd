@@ -44,10 +44,17 @@ options(scipen=999)
 # Introduction & Objectives
 
 This documents provides an analysis of Covid-19 outbreak in France based on 
-offical data, as well as some comparison with Italy.
+offical data, and community data. We also include some comparison with other
+countries such as with Italy.
 
-Situation will be reviewed at country level, regional level and department
-level.
+We will use different types and granularity of data such as :
+
+- number of covid-19 case at country level
+- official hospital daily data (back home, currently hospitalized, currently in ICU & deaths), at country, region, department levels
+- officiel emergency daily data (ER visits, ER visits for covid, hospitalization for covid-19, SOS médecins act, SOS médecins covid-19 acts) at country, regional and department levels.
+- official tests done at country, region and department levels.
+
+Another report of this project is focusing on mortality (see references).
 
 Visualisation and some elements of code are inspired by the best reference we
 found during this period :
@@ -62,7 +69,626 @@ This report is published under creative common CC BY-SA, and code should be
 GPL 3.0
 
 
-# France in the word {.tabset}
+
+# Covid-19 Data - France and other countries
+
+## Wordlwide cases and deaths - John Hopkings 
+
+Over the weeks, one accademic source of data became the reference, it's issued
+by John Hopkings University and released on github.
+
+### Number of cases  {.tabset .tabset-fade .tabset-pills} 
+
+#### Cumulative cases
+
+```{r getJHUCasesCum, include=FALSE}
+www_cases_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
+  gather(date, cases, 5:ncol(.)) %>%
+  mutate(date = as.Date(date, "%m/%d/%y"))  %>%
+  group_by(country = `Country/Region`, date) %>%
+  summarise(cases = sum(cases))
+```
+
+The first dataset availabe records cumulatives cases per countrys/regions. We
+compile the data only per country.
+
+
+```{r viewJHUCasesCum, echo=FALSE}
+DT::datatable(
+  tail(www_cases_cum,400)
+  , filter = 'top'
+  , class = 'cell-border stripe'
+  , options = list(
+    dom = 't'
+    , scrollX = TRUE
+    , scrollCollapse = TRUE
+    )
+)
+```
+
+#### Daily cases
+
+```{r getJHUCasesDaily, include=FALSE}}
+www_cases_daily <- www_cases_cum %>%
+  group_by(country) %>%
+  arrange( cases ) %>%
+  mutate(
+    valBack = c(cases[1], (cases - lag(cases))[-1])
+  ) %>%
+  ungroup()
+```
+
+
+```{r viewJHUCasesDaily, echo=FALSE}
+DT::datatable(
+  tail(www_cases_cum,900)
+  , filter = 'top'
+  , class = 'cell-border stripe'
+  , options = list(
+    dom = 't'
+    , scrollX = TRUE
+    , scrollCollapse = TRUE
+    )
+)
+```
+
+
+### Deaths
+
+```{r getJHUDeaths}
+www_deaths_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
+  gather(date, cases, 5:ncol(.)) %>%
+  mutate(date = as.Date(date, "%m/%d/%y")) %>%
+  group_by(country = `Country/Region`, date) %>%
+  summarise(cases = sum(cases)) 
+```
+
+The first dataset availabe records cumulatives deaths per countrys/regions. We
+compile the data only per country.
+
+
+```{r viewJHUDeaths, echo=FALSE}
+DT::datatable(
+  tail(www_deaths_cum,400),
+  , filter = 'top'
+  , class = 'cell-border stripe'
+  , options = list(
+    dom = 't'
+    , scrollX = TRUE
+    , scrollCollapse = TRUE
+    )
+)
+```
+
+
+
+
+
+
+## Official France Data - Hospital - Emergency - Tests
+### Hospital data (official) {.tabset .tabset-fade .tabset-pills} 
+
+#### Data Sources
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/)
+
+> Le présent jeu de données renseigne sur la situation hospitalières concernant
+> l'épidémie de COVID-19 :
+
+> Deux fichiers sont proposés :
+
+> 1/ Les données hospitalières quotidiennes relatives à l'épidémie du COVID-19 par 
+> département et sexe du patient : nombre de patients hospitalisés, nombre de 
+> personnes actuellement en réanimation ou soins intensifs, nombre cumulé de 
+> personnes retournées à domicile, nombre cumulé de personnes décédées.
+
+> 2/ Les données quotidiennes relatives aux établissements hospitaliers par
+> département : nombre cumulé de services ayant déclaré au moins un cas.
+> Pour chacun des fichiers, une fiche de métadonnées est proposée.
+
+> Attention : certains fichiers peuvent également comporter des anomalies. 
+> N'hésitez pas à les signaler en commentaire. Santé publique France 
+> communiquera les anomalies aux services métiers.
+
+
+```{r sourceUriHosp}
+france_official_hospital_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
+france_official_hospital_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
+
+france_region_departements_url <- "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
+```
+
+Autres data - mortalité
+https://www.insee.fr/fr/information/4470857#tableau-figure2_radio1
+
+
+#### Data Struture
+
+```{r loadCleanFranceOfficialCodebook, echo=FALSE}
+france_official_hospital_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_codebook_url, sep = ";"))
+
+france_official_hospital_dep_codebook %>%
+  rename(Feature = Colonne) %>%
+  mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_hospital_dep_codebook
+
+france_official_hospital_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We import these data and merge associate department with their Region names
+
+```{r}
+france_official_hospital_dep <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_url, sep = ";"))
+france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
+france_official_hospital_dep %>% 
+  rename(
+    department = dep
+    , sex = sexe
+    , date = jour
+    , hospitalized_now = hosp
+    , icu_now = rea
+    , back_home_now = rad
+    , death_cum = dc
+  ) %>%
+  mutate(
+    date = as.Date(date)
+  )-> france_official_hospital_dep
+
+france_official_hospital_dep <- data.table::as.data.table(merge(
+  france_official_hospital_dep
+  , france_region_departements
+  , by.x = "department"
+  , by.y = "num_dep"
+))
+```
+
+
+
+#### Data per department
+
+```{r viewHospitalDataPerDep}
+DT::datatable(france_official_hospital_dep
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+#### Data per regions
+
+We combine now department data per region.
+
+```{r agregateHospPerRegion}
+france_official_hospital_dep %>%
+  group_by(region_name,sex,date) %>%
+  summarise(
+    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
+    , icu_now = sum(icu_now, na.rm = TRUE)
+    , back_home_now = sum(back_home_now, na.rm = TRUE)
+    , death_cum = sum(death_cum, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_reg
+```
+
+
+
+```{r viewHospitalDataPerRegion}
+DT::datatable(france_official_reg
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+#### Data for France (Total)
+
+We use department data to aggregate results at Country level
+
+```{r agregateHospTotal}
+france_official_hospital_dep %>%
+  group_by(sex,date) %>%
+  summarise(
+    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
+    , icu_now = sum(icu_now, na.rm = TRUE)
+    , back_home_now = sum(back_home_now, na.rm = TRUE)
+    , death_cum = sum(death_cum, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  mutate( sex = as.factor(sex)) %>%
+  data.table::as.data.table()-> france_official_hospital_total
+```
+
+
+```{r viewHospitalDataTotal}
+DT::datatable(france_official_hospital_total
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+### Emergency Data (official) {.tabset .tabset-fade .tabset-pills}
+
+This covers emergency GP ( SOS Medecins ) & Hospital Emergency Wards, per region and per department.
+
+#### Data Sources
+
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+
+> Description du jeu de données
+> Quatre fichiers sont proposés :
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> département, sexe et tranche d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre total d’actes médicaux SOS Médecins pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins.
+
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> région, sexe et tranches d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins pour suspicion de COVID-19,
+> nombre d’actes médicaux SOS Médecins total. Le code région correspond au
+> code INSEE publié par l’INSEE sur www.data.gouv.fr.
+
+```{r sourceUriEmergency}
+france_official_emergency_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/eceb9fb4-3ebc-4da3-828d-f5939712600a"
+france_official_emergency_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/2265d880-5260-4b34-8827-b3d76180032e"
+
+france_official_emergency_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
+france_official_emergency_reg_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/02c99d99-96a0-4953-8e30-04fd660530f6"
+
+france_official_emergency_total_url <- "https://www.data.gouv.fr/fr/datasets/r/219427ba-7e90-4eb1-9ac7-4de2e7e2112c"
+france_official_emergency_total_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/0289e4fe-bb67-42b9-a320-cd22c98d82c3"
+
+
+
+france_age_categories_url <- "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6"
+
+france_regions_url <- "https://data.opendatasoft.com/explore/dataset/contours-geographiques-tres-simplifies-des-regions-2019@ofgl-opendatamef/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
+
+```
+
+
+#### Data Structure
+
+Dataset per departments :
+
+```{r loadCleanFranceOfficialERdepCodebook, echo=FALSE}
+france_official_emergency_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+mynames <- as.character(france_official_emergency_dep_codebook[1])
+setnames(france_official_emergency_dep_codebook, unlist(mynames))
+
+france_official_emergency_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Dataset per Regions :
+
+```{r loadCleanFranceOfficialERregCodebook, echo=FALSE}
+france_official_emergency_reg_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+mynames <- as.character(france_official_emergency_reg_codebook[1])
+setnames(france_official_emergency_reg_codebook, unlist(mynames))
+
+france_official_emergency_reg_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Age categories
+
+```{r getAgeCategories}
+france_age_categories <- data.table::as.data.table(read.csv(file = france_age_categories_url, sep = ";", header = T, stringsAsFactors = F))
+names(france_age_categories) <- c("category_code", "category_description")
+
+france_age_categories %>%
+  #select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+```
+
+
+
+
+#### Data per department
+
+
+```{r}
+france_official_emergency_dep <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_url, sep = ","))
+france_official_emergency_dep %>%
+  mutate(date = as.Date(date_de_passage)) %>%
+  as.data.table()-> france_official_emergency_dep
+
+france_official_emergency_dep <- data.table::as.data.table(merge(
+  france_official_emergency_dep
+  , france_region_departements
+  , by.x = "dep"
+  , by.y = "num_dep"
+))
+```
+
+
+
+```{r viewHospitalDataPerERDep}
+DT::datatable(tail(france_official_emergency_dep,100)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+#### Data per regions
+
+
+```{r}
+france_official_emergency_reg <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_url, sep = ","))
+
+
+regions <- as.data.table(read.csv(
+  file= france_regions_url
+  , sep = ";"))
+regions <- regions %>% 
+  mutate( code_insee = Code.INSEE, region_name = Nom.région) %>%
+  select(code_insee, region_name)
+
+france_official_emergency_reg <- merge(
+  x =france_official_emergency_reg
+  , y = regions
+  , by.x = "reg"
+  , by.y = "code_insee")
+```
+
+
+
+```{r viewHospitalDataERPerReg}
+DT::datatable(tail(france_official_emergency_reg,100)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
+#### Data for France
+
+
+```{r}
+france_official_emergency_total <- read.csv(file = france_official_emergency_total_url, sep = ",", stringsAsFactors = TRUE) %>%
+  mutate(
+    date = as.Date(date_de_passage)
+  ) %>%
+  data.table::as.data.table()
+```
+
+
+
+```{r viewHospitalDataERTotal}
+DT::datatable(tail(france_official_emergency_total,100)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
+
+### Covid tests data (Official) {.tabset .tabset-face .tabset-pills}
+
+This covers test data for tests done in city laboratory per department and age
+range.
+
+#### Data Sources
+
+
+Since Monday April 6th, French government is publishing data for tests network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+> Le présent jeu de données renseigne sur le nombre de tests de dépistage du 
+> COVID-19 réalisés par les laboratoires de villes, par département et par sexe :
+
+> Nombre de tests réalisés ;
+> Nombre de tests positifs.
+> Un fichier quotidien et un fichier hebdomadaire sont proposés.
+
+> Mode de production des données
+> Le système de surveillance, appelé 3labos, repose sur la remontée automatisée 
+> des données individuelles de trois laboratoires centralisateurs de 
+> prélèvements (France métropolitaine et DOM) : Eurofins Biomnis et Cerba. Les 
+> objectifs de ce système de surveillance sont le suivi des tendances 
+> temporo-spatiales de maladies infectieuses ciblées, la contribution à 
+> l’investigation d’épidémies et l’apport de données complémentaires aux 
+> systèmes de surveillance existants.
+
+> Dans le cadre de l'épidémie de COVID-19, des données sont transmises 
+> quotidiennement et incluent le résultat biologique (réalisé par PCR), l’âge, 
+> le sexe et le département du patient ou du laboratoire préleveur.
+
+> Les données sont transmises quotidiennement à Santé publique France, avec un 
+> certain délai entre la date de prélèvement et la réalisation du test. Ces 
+> délais comprennent le temps d’acheminement de l’échantillon, la réalisation 
+> du test, le traitement administratif du dossier et son enregistrement dans 
+> le système d’information.
+
+> Éléments d'attention
+> Le fichier mis à disposition contient uniquement les tests réalisés par les 
+> laboratoires de ville. Il ne recense pas l’ensemble des tests réalisés en France.
+
+```{r sourceUriTests}
+france_official_tests_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20"
+france_official_tests_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e"
+```
+
+
+#### Data Structure
+
+Dataset per departments :
+
+```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
+france_official_tests_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_tests_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
+#mynames <- as.character(france_official_tests_dep_codebook[1])
+#setnames(france_official_tests_dep_codebook, unlist(mynames))
+
+france_official_tests_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We import these data and merge associate department with their Region names
+
+```{r}
+france_official_tests_dep <- data.table::as.data.table(read.csv(file = france_official_tests_dep_url, sep = ";"))
+france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
+france_official_tests_dep %>% 
+  rename(
+    department = dep
+    , date = jour
+  ) %>%
+  mutate(
+    date = as.Date(date)
+  )-> france_official_tests_dep
+
+france_official_tests_dep <- data.table::as.data.table(merge(
+  france_official_tests_dep
+  , france_region_departements
+  , by.x = "department"
+  , by.y = "num_dep"
+))
+```
+
+
+#### Data per department (latest)
+
+```{r viewTestslDataPerDep}
+DT::datatable(tail(france_official_tests_dep, 200)
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+#### Data per regions (latest)
+
+We combine now department data per region.
+
+```{r agregateTestsPerRegion}
+france_official_tests_dep %>%
+  group_by(region_name,date,clage_covid) %>%
+  summarise(
+    nb_test = sum(nb_test, na.rm=TRUE)
+    , nb_pos = sum(nb_pos, na.rm = TRUE)
+    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
+    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
+    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
+    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_tests_reg
+```
+
+
+
+```{r viewTestsDataPerRegion}
+DT::datatable(france_official_tests_reg
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+#### Data for France (latest)
+
+We combine now for whole France.
+
+```{r agregateTestTotal}
+france_official_tests_dep %>%
+  group_by(date,clage_covid) %>%
+  summarise(
+    nb_test = sum(nb_test, na.rm=TRUE)
+    , nb_pos = sum(nb_pos, na.rm = TRUE)
+    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
+    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
+    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
+    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  data.table::as.data.table()-> france_official_tests_total
+```
+
+
+
+```{r viewTestsDataPerTotal}
+DT::datatable(france_official_tests_total
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
+# Analysis of number of cases {.tabset}
 
 Based on John Hopkings University data and visuals and code based from ft.com by  
 John Burn-Murdoch ( @jburnmurdoch )
@@ -76,11 +702,7 @@ John Burn-Murdoch ( @jburnmurdoch )
 ## https://gist.githubusercontent.com/johnburnmurdoch/34bd7470dca92e470fd5f12a488923ce/raw/c7a66c8a718299ecfdb9b7c922daca5d33eb8aa0/coronavirus_cases_trajectories.R
 start_case <- 100 #600
 
-my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
-  gather(date, cases, 5:ncol(.)) %>%
-  mutate(date = as.Date(date, "%m/%d/%y")) %>%
-  group_by(country = `Country/Region`, date) %>%
-  summarise(cases = sum(cases)) %>%
+my_df <- www_cases_cum %>%
   filter(
     country != "Others" &
       #country != "Mainland China" &
@@ -186,11 +808,7 @@ The lastest availabe data are for France `r max(fr_dates$date)`.
 
 start_case <- 10 #600
 
-my_df <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
-  gather(date, cases, 5:ncol(.)) %>%
-  mutate(date = as.Date(date, "%m/%d/%y")) %>%
-  group_by(country = `Country/Region`, date) %>%
-  summarise(cases = sum(cases)) %>%
+my_df <- www_deaths_cum %>%
   filter(country != "Others" & country != "Mainland China" & country != "Cruise Ship") %>%
   bind_rows(
     tibble(country = "Republic of Korea", date = as.Date("2020-03-11"), cases = 7755)
@@ -281,538 +899,6 @@ my_df %>%
 
 g
 ```
-
-
-
-
-
-
-
-
-
-# France Official Data
-
-## Hospital data {.tabset .tabset-fade .tabset-pills} 
-
-### Data Sources
-
-Since Friday march 27th, French government is publishing data for hospital and
-health network.
-
-From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/)
-
-> Le présent jeu de données renseigne sur la situation hospitalières concernant
-> l'épidémie de COVID-19 :
-
-> Deux fichiers sont proposés :
-
-> 1/ Les données hospitalières quotidiennes relatives à l'épidémie du COVID-19 par 
-> département et sexe du patient : nombre de patients hospitalisés, nombre de 
-> personnes actuellement en réanimation ou soins intensifs, nombre cumulé de 
-> personnes retournées à domicile, nombre cumulé de personnes décédées.
-
-> 2/ Les données quotidiennes relatives aux établissements hospitaliers par
-> département : nombre cumulé de services ayant déclaré au moins un cas.
-> Pour chacun des fichiers, une fiche de métadonnées est proposée.
-
-> Attention : certains fichiers peuvent également comporter des anomalies. 
-> N'hésitez pas à les signaler en commentaire. Santé publique France 
-> communiquera les anomalies aux services métiers.
-
-
-```{r sourceUriHosp}
-france_official_hospital_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
-france_official_hospital_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
-
-france_region_departements_url <- "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
-```
-
-Autres data - mortalité
-https://www.insee.fr/fr/information/4470857#tableau-figure2_radio1
-
-
-### Data Struture
-
-```{r loadCleanFranceOfficialCodebook, echo=FALSE}
-france_official_hospital_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_codebook_url, sep = ";"))
-
-france_official_hospital_dep_codebook %>%
-  rename(Feature = Colonne) %>%
-  mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_hospital_dep_codebook
-
-france_official_hospital_dep_codebook %>%
-  select(-Description_FR) %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
-
-We import these data and merge associate department with their Region names
-
-```{r}
-france_official_hospital_dep <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_url, sep = ";"))
-france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
-france_official_hospital_dep %>% 
-  rename(
-    department = dep
-    , sex = sexe
-    , date = jour
-    , hospitalized_now = hosp
-    , icu_now = rea
-    , back_home_now = rad
-    , death_cum = dc
-  ) %>%
-  mutate(
-    date = as.Date(date)
-  )-> france_official_hospital_dep
-
-france_official_hospital_dep <- data.table::as.data.table(merge(
-  france_official_hospital_dep
-  , france_region_departements
-  , by.x = "department"
-  , by.y = "num_dep"
-))
-```
-
-
-
-### Data per department
-
-```{r viewHospitalDataPerDep}
-DT::datatable(france_official_hospital_dep
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-### Data per regions
-
-We combine now department data per region.
-
-```{r agregateHospPerRegion}
-france_official_hospital_dep %>%
-  group_by(region_name,sex,date) %>%
-  summarise(
-    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
-    , icu_now = sum(icu_now, na.rm = TRUE)
-    , back_home_now = sum(back_home_now, na.rm = TRUE)
-    , death_cum = sum(death_cum, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_reg
-```
-
-
-
-```{r viewHospitalDataPerRegion}
-DT::datatable(france_official_reg
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-### Data for France (Total)
-
-We use department data to aggregate results at Country level
-
-```{r agregateHospTotal}
-france_official_hospital_dep %>%
-  group_by(sex,date) %>%
-  summarise(
-    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
-    , icu_now = sum(icu_now, na.rm = TRUE)
-    , back_home_now = sum(back_home_now, na.rm = TRUE)
-    , death_cum = sum(death_cum, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  mutate( sex = as.factor(sex)) %>%
-  data.table::as.data.table()-> france_official_hospital_total
-```
-
-
-```{r viewHospitalDataTotal}
-DT::datatable(france_official_hospital_total
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-## Emergency Data {.tabset .tabset-fade .tabset-pills}
-
-This covers emergency GP ( SOS Medecins ) & Hospital Emergency Wards, per region and per department.
-
-### Data Sources
-
-
-Since Friday march 27th, French government is publishing data for hospital and
-health network.
-
-From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
-
-
-> Description du jeu de données
-> Quatre fichiers sont proposés :
-
-> Les données quotidiennes de SOS médecins et des urgences hospitalières par
-> département, sexe et tranche d’âge des patients : nombre de passages aux
-> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
-> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
-> COVID-19, nombre total d’actes médicaux SOS Médecins pour suspicion de
-> COVID-19, nombre d’actes médicaux SOS Médecins.
-
-
-> Les données quotidiennes de SOS médecins et des urgences hospitalières par
-> région, sexe et tranches d’âge des patients : nombre de passages aux
-> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
-> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
-> COVID-19, nombre d’actes médicaux SOS Médecins pour suspicion de COVID-19,
-> nombre d’actes médicaux SOS Médecins total. Le code région correspond au
-> code INSEE publié par l’INSEE sur www.data.gouv.fr.
-
-```{r sourceUriEmergency}
-france_official_emergency_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/eceb9fb4-3ebc-4da3-828d-f5939712600a"
-france_official_emergency_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/2265d880-5260-4b34-8827-b3d76180032e"
-
-france_official_emergency_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
-france_official_emergency_reg_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/02c99d99-96a0-4953-8e30-04fd660530f6"
-
-france_official_emergency_total_url <- "https://www.data.gouv.fr/fr/datasets/r/219427ba-7e90-4eb1-9ac7-4de2e7e2112c"
-france_official_emergency_total_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/0289e4fe-bb67-42b9-a320-cd22c98d82c3"
-
-
-
-france_age_categories_url <- "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6"
-
-france_regions_url <- "https://data.opendatasoft.com/explore/dataset/contours-geographiques-tres-simplifies-des-regions-2019@ofgl-opendatamef/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
-
-```
-
-
-### Data Structure
-
-Dataset per departments :
-
-```{r loadCleanFranceOfficialERdepCodebook, echo=FALSE}
-france_official_emergency_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
-mynames <- as.character(france_official_emergency_dep_codebook[1])
-setnames(france_official_emergency_dep_codebook, unlist(mynames))
-
-france_official_emergency_dep_codebook %>%
-  select(-Description_FR) %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
-
-Dataset per Regions :
-
-```{r loadCleanFranceOfficialERregCodebook, echo=FALSE}
-france_official_emergency_reg_codebook <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_codebook_url, sep = ";", header = T, stringsAsFactors = F))
-mynames <- as.character(france_official_emergency_reg_codebook[1])
-setnames(france_official_emergency_reg_codebook, unlist(mynames))
-
-france_official_emergency_reg_codebook %>%
-  select(-Description_FR) %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
-
-Age categories
-
-```{r getAgeCategories}
-france_age_categories <- data.table::as.data.table(read.csv(file = france_age_categories_url, sep = ";", header = T, stringsAsFactors = F))
-names(france_age_categories) <- c("category_code", "category_description")
-
-france_age_categories %>%
-  #select(-Description_FR) %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-
-```
-
-
-
-
-### Data per department
-
-
-```{r}
-france_official_emergency_dep <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_url, sep = ","))
-france_official_emergency_dep %>%
-  mutate(date = as.Date(date_de_passage)) %>%
-  as.data.table()-> france_official_emergency_dep
-
-france_official_emergency_dep <- data.table::as.data.table(merge(
-  france_official_emergency_dep
-  , france_region_departements
-  , by.x = "dep"
-  , by.y = "num_dep"
-))
-```
-
-
-
-```{r viewHospitalDataPerERDep}
-DT::datatable(tail(france_official_emergency_dep,100)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-### Data per regions
-
-
-```{r}
-france_official_emergency_reg <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_url, sep = ","))
-
-
-regions <- as.data.table(read.csv(
-  file= france_regions_url
-  , sep = ";"))
-regions <- regions %>% 
-  mutate( code_insee = Code.INSEE, region_name = Nom.région) %>%
-  select(code_insee, region_name)
-
-france_official_emergency_reg <- merge(
-  x =france_official_emergency_reg
-  , y = regions
-  , by.x = "reg"
-  , by.y = "code_insee")
-```
-
-
-
-```{r viewHospitalDataERPerReg}
-DT::datatable(tail(france_official_emergency_reg,100)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-
-### Data for France
-
-
-```{r}
-france_official_emergency_total <- read.csv(file = france_official_emergency_total_url, sep = ",", stringsAsFactors = TRUE) %>%
-  mutate(
-    date = as.Date(date_de_passage)
-  ) %>%
-  data.table::as.data.table()
-```
-
-
-
-```{r viewHospitalDataERTotal}
-DT::datatable(tail(france_official_emergency_total,100)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-
-
-## Covid tests data {.tabset .tabset-face .tabset-pills}
-
-This covers test data for tests done in city laboratory per department and age
-range.
-
-### Data Sources
-
-
-Since Monday April 6th, French government is publishing data for tests network.
-
-From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
-
-> Le présent jeu de données renseigne sur le nombre de tests de dépistage du 
-> COVID-19 réalisés par les laboratoires de villes, par département et par sexe :
-
-> Nombre de tests réalisés ;
-> Nombre de tests positifs.
-> Un fichier quotidien et un fichier hebdomadaire sont proposés.
-
-> Mode de production des données
-> Le système de surveillance, appelé 3labos, repose sur la remontée automatisée 
-> des données individuelles de trois laboratoires centralisateurs de 
-> prélèvements (France métropolitaine et DOM) : Eurofins Biomnis et Cerba. Les 
-> objectifs de ce système de surveillance sont le suivi des tendances 
-> temporo-spatiales de maladies infectieuses ciblées, la contribution à 
-> l’investigation d’épidémies et l’apport de données complémentaires aux 
-> systèmes de surveillance existants.
-
-> Dans le cadre de l'épidémie de COVID-19, des données sont transmises 
-> quotidiennement et incluent le résultat biologique (réalisé par PCR), l’âge, 
-> le sexe et le département du patient ou du laboratoire préleveur.
-
-> Les données sont transmises quotidiennement à Santé publique France, avec un 
-> certain délai entre la date de prélèvement et la réalisation du test. Ces 
-> délais comprennent le temps d’acheminement de l’échantillon, la réalisation 
-> du test, le traitement administratif du dossier et son enregistrement dans 
-> le système d’information.
-
-> Éléments d'attention
-> Le fichier mis à disposition contient uniquement les tests réalisés par les 
-> laboratoires de ville. Il ne recense pas l’ensemble des tests réalisés en France.
-
-```{r sourceUriTests}
-france_official_tests_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20"
-france_official_tests_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e"
-```
-
-
-### Data Structure
-
-Dataset per departments :
-
-```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
-france_official_tests_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_tests_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
-#mynames <- as.character(france_official_tests_dep_codebook[1])
-#setnames(france_official_tests_dep_codebook, unlist(mynames))
-
-france_official_tests_dep_codebook %>%
-  select(-Description_FR) %>%
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
-
-We import these data and merge associate department with their Region names
-
-```{r}
-france_official_tests_dep <- data.table::as.data.table(read.csv(file = france_official_tests_dep_url, sep = ";"))
-france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
-france_official_tests_dep %>% 
-  rename(
-    department = dep
-    , date = jour
-  ) %>%
-  mutate(
-    date = as.Date(date)
-  )-> france_official_tests_dep
-
-france_official_tests_dep <- data.table::as.data.table(merge(
-  france_official_tests_dep
-  , france_region_departements
-  , by.x = "department"
-  , by.y = "num_dep"
-))
-```
-
-
-### Data per department (latest)
-
-```{r viewTestslDataPerDep}
-DT::datatable(tail(france_official_tests_dep, 200)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-### Data per regions (latest)
-
-We combine now department data per region.
-
-```{r agregateTestsPerRegion}
-france_official_tests_dep %>%
-  group_by(region_name,date,clage_covid) %>%
-  summarise(
-    nb_test = sum(nb_test, na.rm=TRUE)
-    , nb_pos = sum(nb_pos, na.rm = TRUE)
-    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_tests_reg
-```
-
-
-
-```{r viewTestsDataPerRegion}
-DT::datatable(france_official_tests_reg
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-### Data for France (latest)
-
-We combine now for whole France.
-
-```{r agregateTestTotal}
-france_official_tests_dep %>%
-  group_by(date,clage_covid) %>%
-  summarise(
-    nb_test = sum(nb_test, na.rm=TRUE)
-    , nb_pos = sum(nb_pos, na.rm = TRUE)
-    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_tests_total
-```
-
-
-
-```{r viewTestsDataPerTotal}
-DT::datatable(france_official_tests_total
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
 
 
 
