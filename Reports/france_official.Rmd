@@ -55,7 +55,7 @@ options(scipen=999)
 
 This documents provides an analysis of Covid-19 outbreak in France based on 
 offical data, and community data. We also include some comparison with other
-countries such as with Italy.
+countries such as Italy.
 
 We will use different types and granularity of data such as :
 
@@ -89,14 +89,15 @@ by John Hopkings University and released on github.
 
 ### Number of cases  {.tabset .tabset-fade .tabset-pills} 
 
-#### Cumulative cases
+#### Cumulative cases per countries
 
 ```{r getJHUCasesCum, include=FALSE}
 www_cases_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
   gather(date, cases, 5:ncol(.)) %>%
   mutate(date = as.Date(date, "%m/%d/%y"))  %>%
   group_by(country = `Country/Region`, date) %>%
-  summarise(cases = sum(cases))
+  summarise(cases = sum(cases)) %>%
+  as.data.table()
 ```
 
 The first dataset availabe records cumulatives cases per countrys/regions. We
@@ -116,7 +117,7 @@ DT::datatable(
 )
 ```
 
-#### Daily cases
+#### Daily cases per countries
 
 ```{r getJHUCasesDaily, include=FALSE}
 www_cases_daily <- www_cases_cum %>%
@@ -144,7 +145,7 @@ DT::datatable(
 ```
 
 
-### Deaths
+### Deaths per countries (cumulated)
 
 ```{r getJHUDeaths}
 www_deaths_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
@@ -172,9 +173,84 @@ DT::datatable(
 ```
 
 
+### France community gathered offical cases data
+
+#### Cumulative cases in France
+
+```{r}
+france_com_url <- "https://www.data.gouv.fr/fr/datasets/r/0b66ca39-1623-4d9c-83ad-5434b7f9e2a4"
+
+france_com_cases_cum <- read.csv(file = france_com_url, stringsAsFactors = FALSE) %>%
+  filter(source_nom == "Ministère des Solidarités et de la Santé" &
+                            granularite == "pays") %>%
+  select(date, cas_confirmes) %>%
+  mutate(date = as.Date(date), country = "France") %>%
+  rename( cases = cas_confirmes) %>%
+  as.data.table()
+```
+
+Let's compare JHU data with french offical data. Seems there is an issue in 
+data from JHU for Cumulated cases. We will use official french data which 
+seems to be more reliable (there is a big jump in cases mid april).
+
+```{r compareJHUFrance, echo=FALSE}
+g <- ggplot()
+g <- g + geom_point(data = www_cases_cum[ country == "France"], aes(x = date, y = cases), color = "firebrick")
+g <- g + geom_point(data = france_com_cases_cum, aes(x = date, y = cases), color = "darkblue")
+g + ylab("Daily cum covid-19 cases") + ggtitle(label = "Cumulative cases of covid-19 in France", subtitle = "Red - JHU data, Blue, French official")
+```
 
 
 
+
+
+#### Daily cases in France
+
+```{r getFrasesDaily, include=FALSE}
+france_com_cases_daily <- france_com_cases_cum %>%
+  arrange( cases ) %>%
+  mutate(
+    daily_cases = c(cases[1], (cases - lag(cases))[-1])
+  ) %>%
+  ungroup() %>%
+  as.data.table()
+```
+
+#### Daily cases in France smoothed on3 days
+
+```{r makeDailyAvera}
+france_com_cases_daily_smooth <- copy(france_com_cases_daily)
+france_com_cases_daily_smooth[ , daily_cases :=data.table::frollmean(france_com_cases_daily[, daily_cases], 3) ]
+```
+
+
+
+We compare these data with JHU data and clearly see the outlier in the reporting.
+
+
+```{r compareJHUFranceDaily, echo=FALSE}
+h <- ggplot()
+h <- h + geom_point(data = www_cases_daily[ country == "France"], aes(x = date, y = daily_cases), color = "firebrick")
+h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases), color = "darkblue")
+h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases), color = "darkgreen")
+h <- h + ylab("Daily covid-19 cases") + ggtitle(label = "Daily cases of covid-19 in France", subtitle = "Red - JHU data, Blue, French official")
+h
+```
+
+
+
+```{r viewJHUCasesDaily, echo=FALSE}
+DT::datatable(
+  france_com_cases_daily
+  , filter = 'top'
+  , class = 'cell-border stripe'
+  , options = list(
+    dom = 't'
+    , scrollX = TRUE
+    , scrollCollapse = TRUE
+  )
+)
+```
 
 ## Official France Data - Hospital - Emergency - Tests
 ### Hospital data (official) {.tabset .tabset-fade .tabset-pills} 
@@ -942,7 +1018,7 @@ makeEpicurve <- function(my_data, my_ncol = 3){
       , scales = "free_y"
       ) +
     labs(y="Incident cases", 
-         title=paste("COVID-19 incident daily cases", my_country)) +
+         title= "COVID-19 incident daily cases") +
     theme(legend.position="top")
 }
 ```
@@ -968,7 +1044,7 @@ prefectural_earlyR <- function(df, my_country, last_date, si_mean, si_sd) {
   
   res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
   res$local_case_dates <- local_case_dates
-  res$city <- country
+  res$city <- my_country
   res$last_date <- last_date
   res$si_mean <- si_mean
   res$si_sd <- si_sd
@@ -1001,7 +1077,7 @@ lambda_plot <- function(my_country, mydata, my_date) {
 ```
 
 ```{r} 
-lambda_plot("France", mydata = www_cases_daily, my_date = "2020-05-10")
+lambda_plot(my_country = "France", mydata = france_com_cases_daily_smooth, my_date = "2020-05-14")
 ```
 
 
@@ -1040,23 +1116,38 @@ plot_R <- function(my_country, start_date, last_date, mydata) {
 
 ```{r plotEpiCountries}
 makeEpicurve(
-  my_data = www_cases_daily[ country %in% c("Italy","France","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
-  )
+  my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
+  ) / 
+( makeEpicurve(
+  my_data = france_com_cases_daily[ country %in% c("France") ]
+  ) +
+    makeEpicurve(
+  my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
+  ) +
+    makeEpicurve(
+  my_data = www_cases_daily[ country %in% c("France") ]
+  ) 
+)
+```
+
+```{r}
+plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-14", mydata = france_com_cases_daily)
+```
+
+
+```{r}
+plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-14", mydata = france_com_cases_daily_smooth)
 ```
 
 
 
 ```{r}
-plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-11", mydata = www_cases_daily)
+plot_R(my_country = "US", start_date = "2020-02-28", last_date = "2020-05-14", mydata = www_cases_daily)
 ```
-
-
 
 ```{r}
-plot_R(my_country = "US", start_date = "2020-02-28", last_date = "2020-05-11", mydata = www_cases_daily)
+plot_R(my_country = "Italy", start_date = "2020-02-28", last_date = "2020-05-14", mydata = www_cases_daily)
 ```
-
-
 
 
 
