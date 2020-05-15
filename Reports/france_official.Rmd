@@ -239,7 +239,7 @@ h
 
 
 
-```{r viewJHUCasesDaily, echo=FALSE}
+```{r viewFRCasesDaily, echo=FALSE}
 DT::datatable(
   france_com_cases_daily
   , filter = 'top'
