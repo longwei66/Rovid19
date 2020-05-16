@@ -111,16 +111,42 @@ head(dcd_by_code_daily) %>%
 ### Visualisation
 
 ```{r}
-dcd_by_code_daily_s <- dcd_by_code_daily[ year_death > 1972 ]
-dcd_by_code_daily_s <- dcd_by_code_daily_s[ , .( sum_c = sum(count) ) , by = .(year_death,common_date_death)] 
+dcd_all_clean_s <- dcd_all_clean[ year_death > 1972 ]
+dcd_all_clean_s <- dcd_all_clean_s[ , .N , by = .(date_deces)]
+dcd_all_clean_s[, ':=' (
+  year_death = as.factor(year(date_deces))
+  , month_death = month(date_deces)
+  , week_death = isoweek(date_deces)
+  , dayofyear_death = as.numeric(strftime(date_deces, format = "%j"))
+  , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
+)
+]
+
 ```
 
 
 ```{r}
 library(gghighlight)
-g <- ggplot(data = dcd_by_code_daily_s, group = year_death)
-g <- g + geom_line(mapping = aes(x = common_date_death, y = sum_c, col = as.factor(year_death)), size = 0.5)
-g <- g + gghighlight(year_death %in% c(2020,2003,1989, 1994, 1997,1970))
+g <- ggplot(data = dcd_all_clean_s, group = year_death)
+g <- g + geom_line(
+  mapping = aes(
+    x = common_date_death
+    , y = N
+    , col = year_death
+    )
+  , size = 0.8)
+g <- g + gghighlight(
+  year_death %in% c(
+    1970, 1989
+    #, 1994, 1997,
+    ,1999, 2003, 2017, 2020
+    )
+  , use_direct_label = FALSE
+  , unhighlighted_params = list(
+      size = 0.3
+      , alpha = 0.5
+      )
+  )
 g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
 g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
 g <- g + xlab("Jour") + ylab("nb de décès")

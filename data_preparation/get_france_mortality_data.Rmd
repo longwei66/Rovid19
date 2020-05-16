@@ -100,7 +100,7 @@ g
 These recent data contains deaths even from 2019, we will have to take this
 into account while binding with archived data.
 
-# Historical Deaths from Insee
+ # Historical Deaths from Insee
 
 ```{r}
 #dcd_remote_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
@@ -140,18 +140,6 @@ dcd_all_clean <- rbindlist(
   )
 ```
 
-We add calendar additionnal information.
-
-```{r}
-dcd_all_clean[, ':=' (
-  year_death = year(date_deces)
-  , month_death = month(date_deces)
-  , week_death = isoweek(date_deces)
-  , dayofyear_death = as.numeric(strftime(date_deces, format = "%j"))
-  , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
-)
-]
-```
 
 
 # Explore data
