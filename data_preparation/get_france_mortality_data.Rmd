@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
 ```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
@@ -37,7 +38,7 @@ dataset has insee for source but gather already all past data.
 
 ```{r dataSources}
 # 1.9Mo csv file 
-insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4470857/2020-04-30_detail.zip"
+insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
 # 64Mo csv file
 insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 ```
@@ -48,7 +49,10 @@ insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 ## Get data
 
 ```{r getInsee2020}
-insee_dcd_file <- "../data/DC_jan2018-avr2020_det.csv"
+insee_dcd_file <- paste0(
+  data_storage_url
+  , "insee.fr/mortality/raw/DC_jan2018-mai2020_det.csv"
+  )
 dcd_2020 <- data.table::fread(insee_dcd_file)
 ```
 
@@ -90,14 +94,16 @@ daily_death_2020 <- dcd_2020_clean[ , .N, by = date_deces ]
 
 
 ```{r}
-g <- ggplot(data = daily_death_2020[ date_deces >= as.Date("2019-01-01")])
+g <- ggplot(data = daily_death_2020[ 
+  #date_deces >= as.Date("2019-01-01")
+  ])
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
 g <- g + ggtitle(label = "Daily death in France in 2020")
 g <- g + xlab(label = "Date in 2020") + ylab(label = "Daily death")
 g
 ```
 
-These recent data contains deaths even from 2019, we will have to take this
+These recent data contains deaths even from 2018, we will have to take this
 into account while binding with archived data.
 
  # Historical Deaths from Insee
@@ -105,7 +111,10 @@ into account while binding with archived data.
 ```{r}
 #dcd_remote_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 #download.file(dcd_remote_url,destfile="./data/insee_deces.csv.gz")
-dcd_url <- "../data/insee_deces.csv"
+dcd_url <- paste0(
+  data_storage_url
+  , "insee.fr/mortality/raw/insee_deces.csv"
+  )
 dcd_all <- data.table::fread(file = dcd_url)
 ```
 
@@ -173,6 +182,10 @@ g
 # Save data
 
 ```{r}
-save(dcd_all_clean, file = "../data/clean/dcd_all_clean.Rda")
+save(dcd_all_clean
+     , file = paste0(
+       data_storage_url
+       , "/insee.fr/clean/dcd_all_clean.Rda")
+     )
 ```
 
