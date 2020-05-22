@@ -5,6 +5,7 @@ output: html_document
     
     ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
 ```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
@@ -63,7 +64,7 @@ france_communes <- geojsonio::geojson_read(france_geojson,  what = "sp")
 
 # Data check
 
-We check that this version contains Paris intra-muros arrondissements
+We check that this version contains Paris intra-muros arrondissements.
 
 ```{r}
 sum(france_communes$code == "75115")
@@ -131,8 +132,14 @@ ggplot() +
 
 # Save for later use
 
-```{r}
-save(communes_lim_fortified, file = "../data/clean/communes_lim_fortified.Rda")
+```{r savefiles}
+save(
+  communes_lim_fortified
+  , file = paste0(
+    data_storage_url
+    , "geo/france/clean/communes_lim_fortified.Rda"
+    )
+  )
 ```
 
 
