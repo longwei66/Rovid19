@@ -37,9 +37,9 @@ dataset has insee for source but gather already all past data.
 
 
 ```{r dataSources}
-# 1.9Mo csv file 
+# 11Mo csv file 
 insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
-# 64Mo csv file
+# 540Mo csv file
 insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 ```
 
@@ -56,7 +56,7 @@ insee_dcd_file <- paste0(
 dcd_2020 <- data.table::fread(insee_dcd_file)
 ```
 
-```{r}
+```{r overView2020mortality}
 head(dcd_2020) %>%
     kable() %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -66,7 +66,7 @@ head(dcd_2020) %>%
 
 We map these data using same names as historical data (see later section)
 
-```{r}
+```{r clean2020Mortality}
 dcd_2020_clean <- dcd_2020[ , ':=' (
     sexe = SEXE
     , code_lieu_deces = COMDEC
@@ -88,18 +88,16 @@ dcd_2020_clean[ , sexe := as.numeric(sexe)]
 
 Compute daily death.
 
-```{r}
+```{r dailyDeath2020}
 daily_death_2020 <- dcd_2020_clean[ , .N, by = date_deces ]
 ```
 
 
-```{r}
-g <- ggplot(data = daily_death_2020[ 
-  #date_deces >= as.Date("2019-01-01")
-  ])
+```{r explore2020Mortality}
+g <- ggplot(data = daily_death_2020)
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
-g <- g + ggtitle(label = "Daily death in France in 2020")
-g <- g + xlab(label = "Date in 2020") + ylab(label = "Daily death")
+g <- g + ggtitle(label = "Daily death in France - 2020 data")
+g <- g + xlab(label = "Date") + ylab(label = "Daily death")
 g
 ```
 
@@ -108,7 +106,7 @@ into account while binding with archived data.
 
  # Historical Deaths from Insee
 
-```{r}
+```{r getHistoricalMorality}
 #dcd_remote_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 #download.file(dcd_remote_url,destfile="./data/insee_deces.csv.gz")
 dcd_url <- paste0(
@@ -118,7 +116,7 @@ dcd_url <- paste0(
 dcd_all <- data.table::fread(file = dcd_url)
 ```
 
-```{r}
+```{r overviewMortalityHist}
 head(dcd_all) %>%
     kable() %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -128,7 +126,7 @@ head(dcd_all) %>%
 We remove unused variable for the data to be merged with previous dataset and
 convert dates.
 
-```{r}
+```{r cleanMoralityHist}
 dcd_all_clean <- dcd_all[ , .(sexe, code_lieu_deces, date_deces, date_naissance)]
 dcd_all_clean[ , ':=' (
   date_deces = as.Date(date_deces)
@@ -138,54 +136,95 @@ dcd_all_clean[ , ':=' (
 
 # Merge as Final dataset
 
+
+## Exploring data to find the right cut-off date
+
+As we have seen above, the 2020 updated death contains data from 2018, we will plot these against the historical data for comparison to decide the cut-off date.
+
+
+```{r dailyComputationBoth}
+daily_death_2020 <- dcd_2020_clean[ , .N, by = date_deces ]
+daily_death_hist <- dcd_all_clean[ date_deces > "2017-01-01", .N, by = date_deces ]
+```
+
+
+```{r CompareRecentMortality}
+g <- ggplot()
+g <- g + geom_line(
+  data = daily_death_2020
+  , mapping = aes(x = date_deces, y = N)
+  , col = "blue"
+  , alpha = 0.5
+  )
+g <- g + geom_line(
+  data = daily_death_hist
+  , mapping = aes(x = date_deces, y = N)
+  , col = "red"
+  , alpha = 0.5
+  )
+g <- g + ggtitle(
+  label = "Daily death in France since 2018"
+  , subtitle = "Comparison of historical data vs. 2020 update (blue)"
+    )
+g <- g + xlab(label = "Date") + ylab(label = "Daily death")
+g
+```
+
+The two datasets seems to match thus we will usz 2019-01-01 as cut-off date.
+
+
+## Merge data
+
 Now we merge with recent data (removing recent months)
 
-```{r}
+```{r mergeMortalityDatasets}
 dcd_all_clean <- rbindlist(
   list(
-    dcd_all_clean[ date_deces < "2019-12-01"]
-    , dcd_2020_clean[ date_deces >= "2019-12-01"]
+    dcd_all_clean[ date_deces < "2019-01-01"]
+    , dcd_2020_clean[ date_deces >= "2019-01-01"]
     )
   )
 ```
 
 
 
-# Explore data
+# Explore merge data
 
 
-```{r}
+```{r computeDailyDeathAll}
 daily_death <- dcd_all_clean[ , .N, by = date_deces ]
 ```
 
 
-```{r}
-g <- ggplot(data = daily_death[ 
-  #date_deces > as.Date("2000-01-01")
-  ])
+```{r exploreSinceAll}
+g <- ggplot(data = daily_death)
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
 g <- g + ggtitle(label = "Daily death in France")
 g <- g + xlab(label = "Date") + ylab(label = "Daily death")
 g
 ```
 
-```{r}
+```{r explore89-90}
 g <- ggplot(data = daily_death[ 
   date_deces > as.Date("1989-01-01") &
     date_deces < as.Date("1990-02-01") 
   ])
 g <- g + geom_line(mapping = aes(x = date_deces, y = N))
+g <- g + ggtitle(
+  label = "Daily death in France - 1989 / 1990"
+  ,subtitle = "Observe peak in 1989/12 and drop in 1990/01"
+    )
 g
 ```
 
 
 # Save data
 
-```{r}
+```{r saveData}
 save(dcd_all_clean
      , file = paste0(
        data_storage_url
-       , "/insee.fr/clean/dcd_all_clean.Rda")
+       , "insee.fr/mortality/clean/dcd_all_clean.Rda")
      )
 ```
 
