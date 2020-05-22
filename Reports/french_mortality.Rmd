@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
 ```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
@@ -72,9 +73,24 @@ this preparation is time consuming. For instance the historical death data
 contains 25 millions lines !
 
 ```{r loadDataFromFolder}
-load(file = "../data/clean/communes_lim_fortified.Rda")
-load(file = "../data/clean/communes_mapping.Rda")
-load(file = "../data/clean/dcd_all_clean.Rda")
+load(
+  file = paste0(
+    data_storage_url
+    , "geo/france/clean/communes_lim_fortified.Rda"
+    )
+  )
+load(
+  file = paste0(
+    data_storage_url
+    , "insee.fr/codes/clean/communes_mapping.Rda"
+    )
+)
+load(
+  file = paste0(
+    data_storage_url
+    , "insee.fr/mortality/clean/dcd_all_clean.Rda"
+    )
+)
 ```
 
 
@@ -86,7 +102,7 @@ load(file = "../data/clean/dcd_all_clean.Rda")
 
 ```{r}
 dcd_by_code_daily <- copy(dcd_all_clean)
-dcd_by_code_daily <- dcd_by_code_daily[ , .(count = .N), by = .(code_lieu_deces,date_deces,year_death,month_death,week_death, dayofyear_death,common_date_death) ]
+dcd_by_code_daily <- dcd_by_code_daily[ , .(count = .N), by = .(code_lieu_deces,date_deces) ]
 ```
 
 
@@ -111,8 +127,9 @@ head(dcd_by_code_daily) %>%
 ### Visualisation
 
 ```{r}
-dcd_all_clean_s <- dcd_all_clean[ year_death > 1972 ]
-dcd_all_clean_s <- dcd_all_clean_s[ , .N , by = .(date_deces)]
+#dcd_all_clean_s <- dcd_all_clean[ year_death > 1972 ]
+#dcd_all_clean_s <- dcd_all_clean_s[ , .N , by = .(date_deces)]
+dcd_all_clean_s <- copy(dcd_by_code_daily)
 dcd_all_clean_s[, ':=' (
   year_death = as.factor(year(date_deces))
   , month_death = month(date_deces)
@@ -121,7 +138,7 @@ dcd_all_clean_s[, ':=' (
   , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
 )
 ]
-
+dcd_all_clean_s <- dcd_all_clean_s[ year_death > 1972 ]
 ```
 
 
