@@ -26,6 +26,7 @@ library(rmapshaper)
 library(broom)
 library(ggplot2)
 library(ggthemes)
+library(gghighlight)
 ```
 
 
@@ -96,19 +97,183 @@ load(
 
 # Create summarized data
 
+## Total of death per day
+
+### Agregate per day
+
+```{r createDailyData}
+dcd_daily <- copy(dcd_all_clean)
+dcd_daily <- dcd_daily[ , .(daily_deaths = .N), by = .(date_deces) ]
+```
+
+### Add metadata 
+
+```{r prepareDataVizDaily}
+dcd_daily[, ':=' (
+  year_death = as.factor(year(date_deces))
+  , month_death = month(date_deces)
+  , week_death = isoweek(date_deces)
+  , dayofyear_death = as.numeric(strftime(date_deces, format = "%j"))
+  , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
+)
+]
+```
+
+### Overview of the data
+
+```{r overViewDaily}
+head(dcd_daily) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+### Visualisation
+
+
+```{r mortalityComparison}
+g <- ggplot(
+  data = dcd_daily[ date_deces > as.Date("1973-12-31") ]
+  , group = year_death
+  )
+g <- g + geom_line(
+  mapping = aes(
+    x = common_date_death
+    , y = daily_deaths
+    , col = year_death
+    )
+  , size = 0.8)
+g <- g + gghighlight(
+  year_death %in% c(
+    1989
+    #, 1994, 1997,
+    ,1997 ,1999, 2003, 2017, 2020
+    )
+  , use_direct_label = FALSE
+  , unhighlighted_params = list(
+      size = 0.3
+      , alpha = 0.5
+      )
+  )
+g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
+g <- g + ggtitle("Daily mortality in France - France")
+g <- g + xlab("Date") + ylab("nb of deaths")
+g <- g + theme_minimal() + ylim(c(0,4000))
+g
+```
+
+## Total of death per day and department
+
+### Agregate per day
+
+```{r createDailyDataDep}
+dcd_by_department_daily <- copy(dcd_all_clean)
+dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
+```
+
+```{r MergeAndagregatePerDepartment}
+dcd_by_department_daily <- merge(
+  x = dcd_by_department_daily
+  , y = communes_mapping
+  , by.x = "code_lieu_deces"
+  , by.y = "commune_insee_code"
+  , allow.cartesian = TRUE
+  )
+```
+
+
+```{r createDailyDataDep}
+dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_dep_deaths = sum(daily_deaths)), by = .(departement_insee_code,date_deces) ]
+```
+
+
+
+### Visualisation
+
+```{r}
+mypal <- c("#e7f0fa", #lighter than light blue
+         "#c9e2f6", #light blue
+         "#95cbee", #blue
+         "#0099dc", #darker blue
+         "#4ab04a", #green
+         "#ffd73e", #yellow
+         "#eec73a", #mustard
+         "#e29421", #dark khaki (?)
+         "#f05336", #orange red
+         "#ce472e") #red
+
+g <- ggplot(
+    data = dcd_by_department_daily[ date_deces > as.Date("2019-01-01") ]
+    , aes(
+      x = date_deces
+      , y = departement_insee_code
+      , fill = daily_dep_deaths
+      )
+    ) +
+    geom_tile(colour="white", linejoin = 2, 
+              width=.9, height=.9) + theme_minimal()  +
+    scale_fill_gradientn(
+        colours = mypal
+        # for daily death
+        , values=c(0, 0.05, 0.1, 0.15, 0.2, 0.25, .3, .35, .4, .7, 1)
+        , limits=c(0, 300)
+        , na.value=rgb(246, 246, 246, max=255)
+        #, labels=c("0", "1", "2k", "3k", "4k")
+        , guide = guide_colourbar( barwidth= 0.6 )
+        ) +
+    #scale_y_discrete(limits = rev(levels(droplevels(dcd_by_department_daily$departement_insee_code)))) +
+   # scale_x_continuous(expand=c(0,0), 
+    #                   breaks=seq(1930, 2010, by=10)) +
+    #(x=1963, xend=1963, y=0, yend=56.5, size=.7) +
+    ggtitle("Evolution of daily deaths per department in France") +
+    theme(
+        axis.title.y=element_blank()
+        , axis.text.y = element_text(size = 6)
+        , axis.text.x = element_text(angle = 90)
+        , panel.grid = element_blank()
+        , axis.ticks.y=element_blank()
+        )
+g
+```
+
+
+
+### Add incidence
+
+```{r}
+population_per_dep_url <- "https://www.insee.fr/fr/statistiques/fichier/1893198/estim-pop-dep-sexe-gca-1975-2020.xls"
+population_per_dep <- as.data.table(
+  read.csv(
+    file = population_per_dep_url
+    , sep = ";")
+  )
+dcd_by_department_daily <- merge(
+  x = dcd_by_department_daily,
+  y = population_per_dep[ , .(`Code.Département`, Population)],
+  by.x = "departement_insee_code",
+  by.y = "Code.Département"
+)
+```
+
+
+```{r}
+dcd_by_department_daily[, death_incidence := (daily_dep_deaths / Population) * 100000]
+```
+
+
+
 ## Total of death per day and insee_code (county/city)
 
 ### Agregate per day
 
-```{r}
+```{r createDailyData}
 dcd_by_code_daily <- copy(dcd_all_clean)
-dcd_by_code_daily <- dcd_by_code_daily[ , .(count = .N), by = .(code_lieu_deces,date_deces) ]
+dcd_by_code_daily <- dcd_by_code_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
 ```
 
 
 ### Merge with insee mapping
 
-```{r}
+```{r mergeDailWithInsee}
 dcd_by_code_daily <- merge(
   x = dcd_by_code_daily
   , y = communes_mapping
@@ -118,19 +283,10 @@ dcd_by_code_daily <- merge(
   )
 ```
 
-```{r}
-head(dcd_by_code_daily) %>%
-    kable() %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
+### Add metadata 
 
-### Visualisation
-
-```{r}
-#dcd_all_clean_s <- dcd_all_clean[ year_death > 1972 ]
-#dcd_all_clean_s <- dcd_all_clean_s[ , .N , by = .(date_deces)]
-dcd_all_clean_s <- copy(dcd_by_code_daily)
-dcd_all_clean_s[, ':=' (
+```{r prepareDataVizDaily}
+dcd_by_code_daily[, ':=' (
   year_death = as.factor(year(date_deces))
   , month_death = month(date_deces)
   , week_death = isoweek(date_deces)
@@ -138,40 +294,17 @@ dcd_all_clean_s[, ':=' (
   , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
 )
 ]
-dcd_all_clean_s <- dcd_all_clean_s[ year_death > 1972 ]
 ```
 
 
-```{r}
-library(gghighlight)
-g <- ggplot(data = dcd_all_clean_s, group = year_death)
-g <- g + geom_line(
-  mapping = aes(
-    x = common_date_death
-    , y = N
-    , col = year_death
-    )
-  , size = 0.8)
-g <- g + gghighlight(
-  year_death %in% c(
-    1970, 1989
-    #, 1994, 1997,
-    ,1999, 2003, 2017, 2020
-    )
-  , use_direct_label = FALSE
-  , unhighlighted_params = list(
-      size = 0.3
-      , alpha = 0.5
-      )
-  )
-g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
-g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
-g <- g + xlab("Jour") + ylab("nb de décès")
-g <- g + theme_minimal()
-g
+
+### Overview of the data
+
+```{r overViewDailybyCode}
+head(dcd_by_code_daily) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
-
-
 ### Choropleth for a specific date
 
 ```{r}
@@ -189,7 +322,7 @@ communes_results <- merge(
 p <- ggplot() +
   geom_polygon(
     data = communes_results, 
-    aes(fill = count, x = long, y = lat, group = group),
+    aes(fill = daily_deaths, x = long, y = lat, group = group),
     color="grey", size = 0.02
   ) +
   scale_fill_viridis_c(option = "A", direction = -1) +
