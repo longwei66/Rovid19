@@ -1,10 +1,11 @@
 ---
-title: "Mortality in France, major events"
+title: "Insee Mapping - insee codes, zip code and communes names"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
 ```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
@@ -42,10 +43,30 @@ Mail).
 # Get data
 
 ```{r loadInseeMapping}
-communes_insee <- fread(file = "../data/communes-01012019.csv")
-departements_insee <- fread(file = "../data/departement2019.csv")
-regions_insee <- fread(file = "../data/region2019.csv")
-code_postaux <- fread(file = "../data/code_postaux.csv")
+communes_insee <- fread(
+  file = paste0(
+    data_storage_url 
+    , "insee.fr/codes/raw/communes-01012019.csv"
+    )
+  )
+departements_insee <- fread(
+  file = paste0(
+    data_storage_url 
+    , "insee.fr/codes/raw/departement2019.csv"
+    )
+  )
+regions_insee <- fread(
+  file = paste0(
+    data_storage_url
+    , "insee.fr/codes/raw/region2019.csv"
+    )
+  )
+code_postaux <- fread(
+  file = paste0(
+    data_storage_url
+    , "insee.fr/codes/raw/data_nova_codes_postaux.csv"
+    )
+  )
 ```
 
 # Clean data 
@@ -137,6 +158,12 @@ head(communes_mapping) %>%
 # Save data
 
 ```{r}
-save(communes_mapping, file = "../data/clean/communes_mapping.Rda")
+save(
+  communes_mapping
+  , file = paste0(
+    data_storage_url
+    , "insee.fr/codes/clean/communes_mapping.Rda"
+    )
+  )
 ```
 
