@@ -1,0 +1,157 @@
+---
+title: "Insee population estimate per department / year"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
+```
+
+```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(xlsx)
+library(kableExtra)
+```
+
+
+
+# Introduction
+
+The purpose of this report is to prepare a dataset containing France population
+estimate per department.
+Official statistical burea (https://insee.fr) distribute these data but in an 
+ugly format.
+
+See https://www.insee.fr/fr/statistiques/1893198 for details.
+
+> Chaque année, l'Insee estime la population des régions et des départements 
+(France métropolitaine et DOM) à la date du 1ᵉʳ janvier. Ces estimations 
+annuelles de population sont déclinées par sexe et par âge (quinquennal, 
+classes d'âge).
+
+
+# Data sources
+
+In order to creat this dataset we will combine several sources. First from
+insee.fr we will get official communes, departements and region lists with 
+their insee codes and names ([insee.fr](https://www.insee.fr/fr/information/3720946) ).
+
+We will combine these data and add the official zip codes from La Poste (French
+Mail).
+
+```{r dataSources}
+# https://www.insee.fr/fr/statistiques/fichier/1893198/estim-pop-dep-sexe-gca-1975-2020.xls
+population_france_url <- paste0(
+  data_storage_url
+  , "insee.fr/population/raw/estim-pop-dep-sexe-gca-1975-2020.xls"
+) 
+```
+
+
+# Get data
+
+The data is badly formatted. First it's an excel fils with multiple tabs, one
+per year actually and it's in long format with subtotals as line and columns,
+not to mentio merged cells.
+
+## Get yearly data (function)
+
+We make a function to parse a specific sheet and will loop to get the whole data
+set.
+
+```{r loadInseeMapping}
+get_insee_year <- function(
+  year = 1975
+  , url = population_france_url){
+  message(year)
+  my_data <- xlsx::read.xlsx(
+    file = url
+    , sheetName = as.character(year)
+    , startRow =  5
+  ) %>% 
+    as.data.table()
+  ## keep only first 20 columns
+  my_data <- my_data[ , 1:20]
+  # Rename Features
+  setnames(my_data, c(
+    "code_departement"
+    , "nom_departement"
+    , "total_age_0_a_19", "total_age_20_a_39", "total_age_40_a_59", "total_age_60_a_74", "total_age_75_plus", "total_total"
+    , "homme_age_0_a_19", "homme_age_20_a_39", "homme_age_40_a_59", "homme_age_60_a_74", "homme_age_75_plus", "homme_total"
+    , "femme_age_0_a_19", "femme_age_20_a_39", "femme_age_40_a_59", "femme_age_60_a_74", "femme_age_75_plus", "femme_total"
+  )
+  )
+  # Remove unecessary lines
+  if(year > 1989) {
+    my_data <- my_data[ -c(97) ]
+    my_data <- my_data[ 1:101 ]
+  } else {
+    my_data <- my_data[ -c(97:100) ]
+  }
+  # Reshape to long format
+  my_data <- data.table::melt(my_data, id.vars = c("code_departement", "nom_departement"))
+  
+  # adjust variables
+  my_data[ , ':=' (
+    sex = character()
+    , categorie = character()
+    , annee = year
+    , population = value
+    , value = NULL
+  )
+  ]
+  # Assign features
+  my_data[ grep(pattern = "homme", x = variable), sex := "homme"]
+  my_data[ grep(pattern = "femme", x = variable), sex := "femme"]
+  my_data[ grep(pattern = "total_age", x = variable), sex := "total"]
+  my_data[ grep(pattern = "total_total", x = variable), sex := "total"]
+  my_data[ grep(pattern = "age_0_a_19", x = variable), categorie := "age_0_a_19"]
+  my_data[ grep(pattern = "age_20_a_39", x = variable), categorie := "age_20_a_39"]
+  my_data[ grep(pattern = "age_40_a_59", x = variable), categorie := "age_40_a_59"]
+  my_data[ grep(pattern = "age_60_a_74", x = variable), categorie := "age_60_a_74"]
+  my_data[ grep(pattern = "age_75_plus", x = variable), categorie := "age_75_plus"]
+  my_data[ grep(pattern = "age_75_plus", x = variable), categorie := "age_75_plus"]
+  my_data[ grep(pattern = "_total$", x = variable), categorie := "total"]
+  my_data[ , variable := NULL]
+  my_data
+}
+```
+
+## Test on some years
+
+Let's test this on 2020 and 1975
+
+```{r}
+population_2020 <- get_insee_year(url = population_france_url, year = 2020)
+sum(population_2020[ sex == "total" & categorie == "total"]$population)
+population_2016 <- get_insee_year(url = population_france_url, year = 2016)
+sum(population_2016[ sex == "total" & categorie == "total"]$population)
+population_1975 <- get_insee_year(url = population_france_url, year = 1975)
+sum(population_1975[ sex == "total" & categorie == "total"]$population)
+```
+
+## Get all years
+
+```{r}
+france_population_per_department <- data.table::rbindlist(
+  lapply(X = 1975:2020, FUN = get_insee_year)
+  )
+```
+
+
+
+# Save data
+
+```{r}
+save(
+  france_population_per_department
+  , file = paste0(
+    data_storage_url
+    , "insee.fr/population/raw/estim-pop-dep-sexe-gca-1975-2020.Rda"
+  )
+)
+```
+
