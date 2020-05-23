@@ -44,7 +44,7 @@ Source of this data is https://github.com/gregoiredavid/france-geojson
 Eacch commune is associated with it's insee code.
 
 ```{r dataSources}
-france_geojson <- "https://github.com/gregoiredavid/france-geojson/raw/master/departements.geojson"
+france_geojson <- "https://github.com/gregoiredavid/france-geojson/raw/master/departements-avec-outre-mer.geojson"
 ```
 
 

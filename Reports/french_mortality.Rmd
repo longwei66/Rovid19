@@ -73,6 +73,7 @@ this preparation is time consuming. For instance the historical death data
 contains 25 millions lines !
 
 ```{r loadDataFromFolder}
+# shapefiles for communes and departements
 load(
   file = paste0(
     data_storage_url
