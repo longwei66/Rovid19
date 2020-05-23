@@ -1,0 +1,131 @@
+---
+title: "Get France Departements geographic boundaries"
+output: html_document
+---
+    
+    ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
+```
+
+```{r loadLibraries, message=FALSE, warning=FALSE, include=FALSE}
+library(kableExtra)
+library(dplyr)
+library(geojsonio) # require protonlite install deb : libprotobuf-dev
+# Need a recent version of V8
+# https://github.com/jeroen/V8
+# Ubuntu Xenial (16.04) and Bionic (18.04) only
+# sudo add-apt-repository ppa:cran/v8
+# sudo apt-get update
+# sudo apt-get install libnode-dev
+#devtools::install_github("jeroen/V8")
+library(rmapshaper)
+library(ggplot2)
+library(ggthemes)
+```
+
+
+
+# Introduction
+
+The purpose of this report is to prepare a dataset containing France 
+geographic boundaries at 'departement' level (city / county level).
+
+We will import available opendata geojson file and prepare it for plotting
+with ggplot and various operations.
+
+# Data sources
+
+There are several version of this dataset available, they integrate progressively
+the evolution of French administrative boundaries. However, we use an older
+version to get details of Paris & Marseilles districts (arrondissements).
+
+Source of this data is https://github.com/gregoiredavid/france-geojson
+Eacch commune is associated with it's insee code.
+
+```{r dataSources}
+france_geojson <- "https://github.com/gregoiredavid/france-geojson/raw/master/departements.geojson"
+```
+
+
+# Get data
+
+We read directly the data from the https source.
+
+```{r loadFranceShapeFile}
+## let's read directly the file
+france_departements <- geojsonio::geojson_read(france_geojson,  what = "sp")
+```
+
+# Data check
+
+This dataset contains departements shapefiles as well as some metadata
+
+```{r exampleFranceShapeData}
+head(france_departements@data) %>%
+    kable() %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+# Create simplified versions
+
+The dataset we obtain is quite large, as we are going to plot the whole France 
+on a single map, we don’t need such resolution in the limits of communes. Thus 
+we simplify the polygons with a specific algorithm.
+
+```{r simplifyShapeFile}
+france_departements_0_01 <- rmapshaper::ms_simplify(france_departements, keep = 0.01)
+```
+
+```{r}
+object.size(france_departements)
+object.size(france_departements_0_01)
+```
+ As there are no significant difference, the initial object was simplified enough.
+
+# Create a fortified version
+
+Let's plot France map with communes subdivisions. We need first to convert
+geosjon in dataframe to be used by ggplot.
+
+```{r FranceSimplifiedCommunes}
+# Fortify the data AND keep trace of the departement code.
+departements_lim_fortified <- fortify(france_departements, region = "code")
+
+```
+
+# Plot the results
+
+```{r}
+# Now I can plot this shape easily as described before:
+ggplot() +
+  geom_polygon(data = departements_lim_fortified, 
+               aes( x = long, y = lat, group = group),
+               fill="white", 
+               color="grey", size = 0.2
+               ) +
+  coord_map() +
+  theme_tufte() +
+  theme(
+    axis.line=element_blank()
+    , axis.text=element_blank()
+    , axis.ticks=element_blank()
+    , axis.title=element_blank()
+    ) +
+  ggtitle("France Subdivisions - Departements")
+```
+
+
+# Save for later use
+
+```{r savefiles}
+save(
+  departements_lim_fortified
+  , file = paste0(
+    data_storage_url
+    , "geo/france/clean/departements_lim_fortified.Rda"
+    )
+  )
+```
+
+

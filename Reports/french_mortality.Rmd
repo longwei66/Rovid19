@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+## configure path for data storage
 data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
@@ -17,11 +18,6 @@ library(mapproj)
 library(kableExtra)
 # Need a recent version of V8
 # https://github.com/jeroen/V8
-# Ubuntu Xenial (16.04) and Bionic (18.04) only
-# sudo add-apt-repository ppa:cran/v8
-# sudo apt-get update
-# sudo apt-get install libnode-dev
-#devtools::install_github("jeroen/V8")
 library(rmapshaper)
 library(broom)
 library(ggplot2)
@@ -56,13 +52,16 @@ spread of mortality overtime.
 
 ## Data sources
 
-We are combining three ressources :
+We are combining five ressources :
 
 - Mortality daily data per communes. In another notebook we prepared a dataset
 combining latest official death data from french statistical bureau 
 (https://insee.fr) for 2020 with historical official death data gathered by 
 Christian Quest from https://data.cquest.org from insee.fr as well.
+- French population over time per departements (from https://insee.fr)
 - a spatial dataset containing the geographic borders of communes fortified as
+a data frame to be plotted with ggplot.
+- a spatial dataset containing the geographic borders of departements fortified as
 a data frame to be plotted with ggplot.
 - the list of all french communes with their insee codes and zip codes.
 
@@ -92,6 +91,13 @@ load(
     , "insee.fr/mortality/clean/dcd_all_clean.Rda"
     )
 )
+load(
+  file = paste0(
+    data_storage_url
+    , "insee.fr/population/raw/estim-pop-dep-sexe-gca-1975-2020.Rda"
+    )
+)
+
 ```
 
 

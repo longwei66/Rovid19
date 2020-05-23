@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
 data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
 
@@ -14,6 +15,7 @@ library(dplyr)
 library(tidyr)
 library(xlsx)
 library(kableExtra)
+library(ggplot2)
 ```
 
 
@@ -85,11 +87,16 @@ get_insee_year <- function(
   )
   )
   # Remove unecessary lines
-  if(year > 1989) {
+  if(year <= 1989)  {
+    my_data <- my_data[ -c(97:100) ]
+  }
+  if(year > 1989 & year < 2014) {
+    my_data <- my_data[ -c(97) ]
+    my_data <- my_data[ 1:100 ]
+  }
+  if(year >= 2014) {
     my_data <- my_data[ -c(97) ]
     my_data <- my_data[ 1:101 ]
-  } else {
-    my_data <- my_data[ -c(97:100) ]
   }
   # Reshape to long format
   my_data <- data.table::melt(my_data, id.vars = c("code_departement", "nom_departement"))
@@ -129,6 +136,8 @@ population_2020 <- get_insee_year(url = population_france_url, year = 2020)
 sum(population_2020[ sex == "total" & categorie == "total"]$population)
 population_2016 <- get_insee_year(url = population_france_url, year = 2016)
 sum(population_2016[ sex == "total" & categorie == "total"]$population)
+population_2000 <- get_insee_year(url = population_france_url, year = 2000)
+sum(population_2000[ sex == "total" & categorie == "total"]$population)
 population_1975 <- get_insee_year(url = population_france_url, year = 1975)
 sum(population_1975[ sex == "total" & categorie == "total"]$population)
 ```
@@ -141,6 +150,34 @@ france_population_per_department <- data.table::rbindlist(
   )
 ```
 
+# Visualisation   
+
+```{r}
+g <- ggplot(data = france_population_per_department[ categorie == "total" & sex == "total"])
+g <- g + geom_line(aes(x= annee, y = population))
+g <- g + facet_wrap(facets = . ~ code_departement, ncol = 10, scales = "free_y")
+g <- g + theme_minimal() +
+    theme(
+      #legend.position = "none"
+      strip.text.x = element_text(
+        size=5
+        , face = "bold"
+        , vjust = -0.0,
+        margin = margin(-0.00, 0, 0, 0, "cm")
+      )
+      , strip.background = element_rect(
+        color ="white"
+        , fill ="white"
+        , size = 0.5
+        #, linetype="solid"
+      )
+      , axis.text.x = element_text(
+        angle = 90
+        , size = 8
+      )
+      )
+g
+```
 
 
 # Save data
