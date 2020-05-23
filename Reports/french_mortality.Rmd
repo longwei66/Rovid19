@@ -423,21 +423,33 @@ my_data_history <- dcd_by_department_average[
 ## Start the plot
 g <- ggplot(data = my_data_history)
 # Add mean daily values
-g <- g + geom_line(aes(x= common_date_death, y = deaths_av), col = "grey", alpha = 0.5)
+g <- g + geom_line(
+  aes(x= common_date_death, y = deaths_av)
+  , col = "grey", alpha = 0.3
+  )
 # Add smooth of average last 5 years values
-g <- g + geom_line(aes(x= common_date_death, y = deaths_av_smooth), col = "darkred", alpha = 0.8)
+g <- g + geom_line(
+  aes(x= common_date_death, y = deaths_av_smooth)
+  , col = "darkgrey"
+  , alpha = 0.8
+  )
 # Add 2020 data
-#g <- g + geom_line(data = my_data_2020 , aes( x= common_date_death, y = daily_dep_deaths)
-#  , col = "darkblue", alpha = 0.2)
+g <- g + geom_line(
+  data = my_data_2020
+  , aes( x= common_date_death, y = daily_dep_deaths)
+  , col = "darkblue", alpha = 0.2
+  )
 
 # Add 2020 data Smooth
 g <- g + geom_smooth(
   data = my_data_2020
   , aes( x= common_date_death, y = daily_dep_deaths)
   , method = "loess"
+  , span = 0.5
   , se = FALSE
   , col = "darkblue", alpha = 0.8
   )
+
 g <- g + facet_wrap(
   facets = . ~ departement_insee_code
   , ncol = 8
@@ -465,7 +477,12 @@ g <- g + theme_minimal() +
       )
       , axis.text.y = element_text(size = 5)
       )
-g <- g + scale_x_date(date_labels = "%b/%d")
+g <- g + scale_x_date(date_labels = "%b/%d") +
+  expand_limits(y = 0) #+
+  #ylim(c(0,170))
+  geom_vline(
+    xintercept = as.Date("2000-03-15")
+    , color = "darkgrey", size= 0.6, alpha = 0.7 )
 g <- g + ggtitle(
   label = "Daily Mortality in 2020 per departement"
   , subtitle = "vs. 2015 ~ 2019 average") +
