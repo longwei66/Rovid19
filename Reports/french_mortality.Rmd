@@ -452,8 +452,8 @@ g <- g + geom_smooth(
 
 g <- g + facet_wrap(
   facets = . ~ departement_insee_code
-  , ncol = 8
-  , scales = "free_y"
+  , ncol = 10
+  #, scales = "free_y"
   )
 
 g <- g + theme_minimal() +
@@ -478,8 +478,8 @@ g <- g + theme_minimal() +
       , axis.text.y = element_text(size = 5)
       )
 g <- g + scale_x_date(date_labels = "%b/%d") +
-  expand_limits(y = 0) #+
-  #ylim(c(0,170))
+  expand_limits(y = 0) +
+  ylim(c(0,170)) +
   geom_vline(
     xintercept = as.Date("2000-03-15")
     , color = "darkgrey", size= 0.6, alpha = 0.7 )
