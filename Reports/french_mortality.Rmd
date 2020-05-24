@@ -30,7 +30,7 @@ library(gghighlight)
 # Introduction
 
 The purpose of this article is to analyse mortality in France over time and
-over french territory.
+over french territory at different scales.
 
 This work was inspired by several articles (see references section) and tweets.
 
@@ -52,25 +52,27 @@ spread of mortality overtime.
 
 ## Data sources
 
-We are combining five ressources :
+We are combining five resources :
 
-- Mortality daily data per communes. In another notebook we prepared a dataset
-combining latest official death data from french statistical bureau 
-(https://insee.fr) for 2020 with historical official death data gathered by 
-Christian Quest from https://data.cquest.org from insee.fr as well.
-- French population over time per departements (from https://insee.fr)
-- a spatial dataset containing the geographic borders of communes fortified as
-a data frame to be plotted with ggplot.
-- a spatial dataset containing the geographic borders of departements fortified as
-a data frame to be plotted with ggplot.
-- the list of all french communes with their insee codes and zip codes.
+- mortality daily data per communes based on latest official death data from 
+french statistical bureau (https://insee.fr) for 2020 and historical official
+death data gathered by Christian Quest from https://data.cquest.org from
+insee.fr as well.
+- French population over time per departements (from https://insee.fr), prepared
+as well in a separated notebook.
+- geographic spatial limits of communes fortified as a data frame to be plotted
+with ggplot (from https://github.com/gregoiredavid/france-geojson)
+- geographic spatial limits of departement fortified as a data frame to be 
+plotted with ggplot (from https://github.com/gregoiredavid/france-geojson)
+- the list of all french communes with their insee codes and zip codes, this is
+a merge from La Poste open data and insee.fr
 
 
 ## Load data
 
-We prepared in three separated notebook the datasets mentioned previously as
-this preparation is time consuming. For instance the historical death data
-contains 25 millions lines !
+We prepared in separated notebook the datasets mentioned previously, thus we
+just have to load R objects here.
+
 
 ```{r loadDataFromFolder}
 # shapefiles for communes and departements
@@ -86,20 +88,21 @@ load(
     , "geo/france/clean/departements_lim_fortified.Rda"
     )
   )
-
+# List of Communes and metadata such as zip codes
 load(
   file = paste0(
     data_storage_url
     , "insee.fr/codes/clean/communes_mapping.Rda"
     )
 )
+# All individual deaths since 1970 in France
 load(
   file = paste0(
     data_storage_url
     , "insee.fr/mortality/clean/dcd_all_clean.Rda"
     )
 )
-# france_population_per_departement
+# France_population_per_departement and years
 load(
   file = paste0(
     data_storage_url
@@ -110,29 +113,32 @@ load(
 ```
 
 
-# Create summarized data
+# Mortality in France & main events at country level
 
-In this section we will create some aggregated data at various levels.
+In this section we will analyse mortality in France at country level and
+identify the main events.
 
 ## France Total deaths per day
 
-### Prepare the data
+Let's first compute the total number of death per day since 1970 and compare
+trends.
 
-We first count the number of deaths per day for the whole country.
+Mortality data set contains all individual deaths, we just have to count these
+per date of death. Then we add some usefull metadata as new features to improve
+data visualisation in the next sections.
 
-```{r createDailyData}
+```{r createDcdDaily}
 dcd_daily <- copy(dcd_all_clean)
+# data.table is super fast for such tasks
 dcd_daily <- dcd_daily[ , .(daily_deaths = .N), by = .(date_deces) ]
-```
-
-Then we add some usefull metadata as new feature necessary in the next plots.
-
-```{r prepareDataVizDaily}
+# add new features
 dcd_daily[, ':=' (
-  year_death = as.factor(year(date_deces))
+  year_death = year(date_deces)
   , month_death = month(date_deces)
   , week_death = isoweek(date_deces)
   , dayofyear_death = as.numeric(strftime(date_deces, format = "%j"))
+  # bellow is a dummy variable for pretty prints of plots, mapping the
+  # day of the year in 2000
   , common_date_death = as.Date(paste0("2000-",format(date_deces, "%j")), "%Y-%j")
 )
 ]
@@ -146,7 +152,7 @@ head(dcd_daily) %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
-### Visualize the data
+## Visualize the data
 
 In the following plot we illustrate trends of mortality in France in number of 
 deaths per day for the whole country over time since 1973. We highlighted some
@@ -195,14 +201,14 @@ low mortality during summer
 further checking as we didn't find articles or references regarding this event.
 
 
-## France deaths per deparement per day
+# Mortality in France at departement level
 
 ### Prepare the data
 
 As a second step, we compute the daily number of deaths per location code, at 
 communes level.
 
-```{r createDailyDataDep}
+```{r createDailyDataDep1}
 dcd_by_department_daily <- copy(dcd_all_clean)
 dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
 ```
@@ -223,14 +229,14 @@ dcd_by_department_daily <- merge(
 Finally we aggregate the data at departement level, summing all communes' data
 included in each departement.
 
-```{r createDailyDataDep}
+```{r createDailyDataDep2}
 dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_dep_deaths = sum(daily_deaths)), by = .(departement_insee_code,date_deces) ]
 ```
 
 
 Then we add some usefull metadata as new feature necessary in the next plots.
 
-```{r prepareDataVizDaily}
+```{r prepareDataVizDaily1}
 dcd_by_department_daily[, ':=' (
   year_death = as.factor(year(date_deces))
   , month_death = month(date_deces)
@@ -491,38 +497,12 @@ g
 ```
 
 
-## France Mortality incidence (mortality rate)
-
-### Add incidence
-
-
-```{r}
-population_per_dep_url <- "https://www.insee.fr/fr/statistiques/fichier/1893198/estim-pop-dep-sexe-gca-1975-2020.xls"
-population_per_dep <- as.data.table(
-  read.csv(
-    file = population_per_dep_url
-    , sep = ";")
-  )
-dcd_by_department_daily <- merge(
-  x = dcd_by_department_daily,
-  y = population_per_dep[ , .(`Code.Département`, Population)],
-  by.x = "departement_insee_code",
-  by.y = "Code.Département"
-)
-```
-
-
-```{r}
-dcd_by_department_daily[, death_incidence := (daily_dep_deaths / Population) * 100000]
-```
-
-
 
 ## Total of death per day and insee_code (county/city)
 
 ### Agregate per day
 
-```{r createDailyData}
+```{r createDailyData2}
 dcd_by_code_daily <- copy(dcd_all_clean)
 dcd_by_code_daily <- dcd_by_code_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
 ```
@@ -542,7 +522,7 @@ dcd_by_code_daily <- merge(
 
 ### Add metadata 
 
-```{r prepareDataVizDaily}
+```{r prepareDataVizDaily2}
 dcd_by_code_daily[, ':=' (
   year_death = as.factor(year(date_deces))
   , month_death = month(date_deces)
@@ -562,6 +542,7 @@ head(dcd_by_code_daily) %>%
     kable() %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
+
 ### Choropleth for a specific date
 
 ```{r}
@@ -596,106 +577,6 @@ p <- ggplot() +
   labs(fill = "nb_death")
 p
 ```
-
-
-
-
-## Total of death per week and insee_code (county/city)
-
-### Agregate per week
-
-```{r}
-dcd_by_code_weekly <- copy(dcd_all_clean)
-dcd_by_code_weekly <- dcd_by_code_weekly[ , .(count = .N), by = .(code_lieu_deces,week_death,year_death,month_death) ]
-```
-
-
-### Merge with insee mapping
-
-```{r}
-dcd_by_code_weekly <- merge(
-  x = dcd_by_code_weekly
-  , y = communes_mapping
-  , by.x = "code_lieu_deces"
-  , by.y = "commune_insee_code"
-  , allow.cartesian = TRUE
-  )
-```
-
-```{r}
-head(dcd_by_code_weekly) %>%
-    kable() %>%
-    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-```
-
-
-
-### Visualisation
-
-```{r}
-dcd_by_code_weekly_s <- dcd_by_code_weekly[ year_death > 1972 ]
-dcd_by_code_weekly_s <- dcd_by_code_weekly_s[ , .( sum_c = sum(count) ) , by = .(year_death,week_death)] 
-
-```
-
-
-```{r}
-library(gghighlight)
-g <- ggplot(data = dcd_by_code_weekly_s, group = year_death)
-g <- g + geom_line(mapping = aes(x = week_death, y = sum_c, col = as.factor(year_death)), size = 0.5)
-g <- g + gghighlight(year_death %in% c(2020,2003,1989, 1994, 1997,1970))
-#g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
-g <- g + ggtitle("Mortalité quotidienne par année - France*** ")
-g <- g + xlab("Week") + ylab("nb de décès")
-g <- g + theme_minimal()
-g
-```
-
-
-### Choropleth for a specific week
-
-```{r}
-communes_results_w <- merge(
-  x = dcd_by_code_weekly[ week_death == 12]
-  , y = communes_lim_fortified
-  , by.x = "code_lieu_deces"
-  , by.y = "id"
-  , all.y = TRUE
-  , allow.cartesian=TRUE
-)
-```
-
-```{r}
-p <- ggplot() +
-  geom_polygon(
-    data = communes_results_w[ 
-      departement_insee_code %in% c(
-      "92","91","93", "94","95","78", "75"
-      # "69"
-      # , "69", "13","33","19"
-      ) 
-      # | TRUE
-      ], 
-    aes(fill = count, x = long, y = lat, group = group),
-    color="grey", size = 0.02
-  ) +
-  scale_fill_viridis_c(option = "A", direction = -1) +
-  #facet_wrap(facets = . ~ liste_shortname) +
-  coord_map() +
-  theme_tufte() +
-  theme(
-    axis.line=element_blank()
-    , axis.text=element_blank()
-    , axis.ticks=element_blank()
-    , axis.title=element_blank()
-    ) +
-  ggtitle("Weekly mortality - 2020 - Week 12 - France") +
-  labs(fill = "nb_death")
-p
-```
-
-
-
 
 # References
 
