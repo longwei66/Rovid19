@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+Sys.setlocale(category="LC_ALL", locale="C")
 ## configure path for data storage
 data_storage_url <- "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/"
 ```
@@ -159,6 +160,18 @@ deaths per day for the whole country over time since 1973. We highlighted some
 specific years.
 
 ```{r mortalityComparison, echo=FALSE}
+# Years to be highlighted
+year_selected <- c(
+    1989
+    #, 1994, 1997,
+    ,1997 ,1999, 2003
+    #2017
+    , 2020
+    )
+# Define the number of colors you want
+nb_cols <- length(unique(year_selected))
+mycolors <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(5, "Dark2"))(nb_cols)
+  
 g <- ggplot(
   data = dcd_daily[ date_deces > as.Date("1973-12-31") ]
   , group = year_death
@@ -167,25 +180,46 @@ g <- g + geom_line(
   mapping = aes(
     x = common_date_death
     , y = daily_deaths
-    , col = year_death
+    , col = as.factor(year_death)
     )
   , size = 0.8)
 g <- g + gghighlight(
-  year_death %in% c(
-    1989
-    #, 1994, 1997,
-    ,1997 ,1999, 2003, 2017, 2020
-    )
+  year_death %in% year_selected
   , use_direct_label = FALSE
   , unhighlighted_params = list(
       size = 0.3
       , alpha = 0.5
       )
-  )
+  ) + scale_color_manual(values = mycolors)
 g <- g + scale_x_date(labels = function(x) format(x, "%d-%b")) 
-g <- g + ggtitle("Daily mortality in France - France")
-g <- g + xlab("Date") + ylab("nb of deaths")
-g <- g + theme_minimal() + ylim(c(0,4000))
+g <- g + ggtitle("Mortality in France")
+g <- g + labs(
+  x = NULL
+  , y = "deaths"
+  , colour = NULL
+  )
+g <- g + ylim(c(0,4000)) + theme_hc() #theme_tufte() #theme_minimal() 
+# Add annotation
+g <- g + annotate(
+  "text", x = as.Date("2000-08-08"), y = 3800,
+  label = "Heatwave", alpha = .3, size = 3
+  )
+g <- g + annotate(
+  "text", x = as.Date("2000-04-01"), y = 2900,
+  label = "Covid-19", alpha = .3, size = 3
+  )
+g <- g + annotate(
+  "text", x = as.Date("2000-03-01"), y = 2600,
+  label = "Flu", alpha = .3, size = 3
+  )
+g <- g + annotate(
+  "text", x = as.Date("2000-12-15"), y = 3800,
+  label = "1989 Flu ?", alpha = .3, size = 3
+  )
+g <- g + annotate(
+  "text", x = as.Date("2000-07-20"), y = 500,
+  label = "June Flu + low summer ?", alpha = .3, size = 3
+  )
 g
 ```
 
