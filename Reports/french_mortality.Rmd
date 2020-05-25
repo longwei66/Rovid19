@@ -27,8 +27,9 @@ library(gghighlight)
 ```
 
 
+# Introduction & Objective {.tabset .tabset-face .tabset-pills}
 
-# Introduction
+## Inspiration
 
 The purpose of this article is to analyse mortality in France over time and
 over french territory at different scales.
@@ -44,12 +45,12 @@ covid-19 on french mortality and the 2003 heatwave which killed 14k people.
 
 The second one is from @jburnmurdoch and compares trend accross countries.
 
+<center>
 <blockquote class="twitter-tweet"><p lang="en" dir="ltr">NEW: a lot of data on reported Covid deaths is highly suspect, so we’ve been looking into excess mortality — how many more people than usual have been dying around the world in recent weeks?<br><br>Story by me, <a href="https://twitter.com/ChrisGiles_?ref_src=twsrc%5Etfw">@ChrisGiles_</a> &amp; <a href="https://twitter.com/valentinaromei?ref_src=twsrc%5Etfw">@valentinaromei</a> (free to read): <a href="https://t.co/EiE5Q3OSmR">https://t.co/EiE5Q3OSmR</a> <a href="https://t.co/AiTdBnBma9">pic.twitter.com/AiTdBnBma9</a></p>&mdash; John Burn-Murdoch (@jburnmurdoch) <a href="https://twitter.com/jburnmurdoch/status/1254461123753054209?ref_src=twsrc%5Etfw">April 26, 2020</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
 
 We will complement this time view by geographical view, visualizing the spatial
 spread of mortality overtime.
-
-# Get data {.tabset .tabset-face .tabset-pills}
 
 ## Data sources
 
@@ -75,7 +76,7 @@ We prepared in separated notebook the datasets mentioned previously, thus we
 just have to load R objects here.
 
 
-```{r loadDataFromFolder}
+```{r loadDataFromFolder, message=FALSE, warning=FALSE}
 # shapefiles for communes and departements
 load(
   file = paste0(
@@ -114,7 +115,8 @@ load(
 ```
 
 
-# Mortality in France & main events at country level
+# Mortality at country level
+
 
 In this section we will analyse mortality in France at country level and
 identify the main events.
@@ -125,7 +127,7 @@ Let's first compute the total number of death per day since 1970 and compare
 trends.
 
 Mortality data set contains all individual deaths, we just have to count these
-per date of death. Then we add some usefull metadata as new features to improve
+per date of death. Then we add some useful metadata as new features to improve
 data visualisation in the next sections.
 
 ```{r createDcdDaily}
@@ -145,9 +147,9 @@ dcd_daily[, ':=' (
 ]
 ```
 
-Let's have a look at the data.
+Let's have a look at a small extract of the data.
 
-```{r overViewDaily}
+```{r overViewDaily, echo=FALSE}
 head(dcd_daily) %>%
     kable() %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -159,7 +161,7 @@ In the following plot we illustrate trends of mortality in France in number of
 deaths per day for the whole country over time since 1973. We highlighted some
 specific years.
 
-```{r mortalityComparison, echo=FALSE}
+```{r mortalityComparison, echo=FALSE, message=FALSE, warning=FALSE}
 # Years to be highlighted
 year_selected <- c(
     1989
@@ -235,36 +237,32 @@ low mortality during summer
 further checking as we didn't find articles or references regarding this event.
 
 
-# Mortality in France at departement level
+# Mortality at *departement* level
+
+Now that we have a global idea of mortality trends and events at country level
+we will check local situation, at *departement* level.
 
 ### Prepare the data
 
-As a second step, we compute the daily number of deaths per location code, at 
-communes level.
+The deaths database contains insee code for *communes*, we need to proceed in 
+two steps to get agregated data at *departement* level. We ifrst compute the
+daily number of deaths per location code, at communes level, then merge
+with *communes* insee code mapping with *departement* numbers and finally 
+agregate data at this level.
 
 ```{r createDailyDataDep1}
-dcd_by_department_daily <- copy(dcd_all_clean)
-dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
-```
+dcd_by_communes_daily <- copy(dcd_all_clean)
+dcd_by_communes_daily <- dcd_by_communes_daily[ , .(daily_deaths = .N), by = .(code_lieu_deces,date_deces) ]
 
-We merge the resulting data with the mapping between communes codes and 
-departements codes.
-
-```{r MergeAndagregatePerDepartment}
-dcd_by_department_daily <- merge(
-  x = dcd_by_department_daily
+dcd_by_communes_daily <- merge(
+  x = dcd_by_communes_daily
   , y = communes_mapping
   , by.x = "code_lieu_deces"
   , by.y = "commune_insee_code"
   , allow.cartesian = TRUE
   )
-```
 
-Finally we aggregate the data at departement level, summing all communes' data
-included in each departement.
-
-```{r createDailyDataDep2}
-dcd_by_department_daily <- dcd_by_department_daily[ , .(daily_dep_deaths = sum(daily_deaths)), by = .(departement_insee_code,date_deces) ]
+dcd_by_department_daily <- dcd_by_communes_daily[ , .(daily_dep_deaths = sum(daily_deaths)), by = .(region_name,departement_insee_code,date_deces) ]
 ```
 
 
@@ -333,7 +331,9 @@ g <- ggplot(
         , axis.text.x = element_text(angle = 90)
         , panel.grid = element_blank()
         , axis.ticks.y=element_blank()
+        , strip.text.y.right = element_text(angle = 0)
         )
+g <- g + facet_grid(facets = region_name ~ ., scales = "free_y")
 g
 ```
 
@@ -358,8 +358,8 @@ dcd_by_department_average <- dcd_by_department_daily[
   date_deces >= as.Date("2015-01-01") &
     date_deces < as.Date("2020-01-01")
     ]
-dcd_by_department_average <- dcd_by_department_average[ , .(deaths_av  = mean(daily_dep_deaths)), by = .(departement_insee_code,common_date_death) ]
-dcd_by_department_average <- dcd_by_department_average[order(departement_insee_code,common_date_death)]
+dcd_by_department_average <- dcd_by_department_average[ , .(deaths_av  = mean(daily_dep_deaths)), by = .(region_name,departement_insee_code,common_date_death) ]
+dcd_by_department_average <- dcd_by_department_average[order(region_name,departement_insee_code,common_date_death)]
 ```
 
 ```{r}
@@ -392,9 +392,9 @@ dcd_by_department_average[ , ':=' (
 
 ```{r mortalityPerDep}
 dep_filter <- c(
-  "75","92", "94", "93"
-  ,"06"
-  ,"19", "23", "87"
+  #"75","92", "94", "93"
+  "04","06"
+  #,"19", "23", "87"
   ) 
 my_data_history <- dcd_by_department_average[ 
   departement_insee_code %in% dep_filter
@@ -405,7 +405,19 @@ my_data_history <- dcd_by_department_average[
 ## Start the plot
 g <- ggplot(data = my_data_history)
 # Add mean daily values
-g <- g + geom_line(aes(x= common_date_death, y = deaths_av), col = "grey", alpha = 0.5)
+#g <- g + geom_line(aes(x= common_date_death, y = deaths_av), col = "grey", alpha = 0.5)
+# Add daily values from the last 5 years
+g <- g + geom_line(
+  data = dcd_by_department_daily[
+    date_deces >= as.Date("2015-01-01") &
+    date_deces < as.Date("2020-01-01") &
+    (
+      departement_insee_code %in% dep_filter
+      | TRUE
+    )
+  ]
+  , aes(x= common_date_death, y = daily_dep_deaths), col = "grey", alpha = 0.5
+  )
 # Add smooth of average last 5 years values
 g <- g + geom_line(aes(x= common_date_death, y = deaths_av_smooth), col = "darkred", alpha = 0.8)
 
@@ -493,7 +505,7 @@ g <- g + geom_smooth(
 g <- g + facet_wrap(
   facets = . ~ departement_insee_code
   , ncol = 10
-  #, scales = "free_y"
+  , scales = "free_y"
   )
 
 g <- g + theme_minimal() +
@@ -519,7 +531,7 @@ g <- g + theme_minimal() +
       )
 g <- g + scale_x_date(date_labels = "%b/%d") +
   expand_limits(y = 0) +
-  ylim(c(0,170)) +
+  #ylim(c(0,170)) +
   geom_vline(
     xintercept = as.Date("2000-03-15")
     , color = "darkgrey", size= 0.6, alpha = 0.7 )

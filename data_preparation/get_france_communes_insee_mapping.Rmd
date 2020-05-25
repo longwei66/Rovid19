@@ -122,6 +122,9 @@ regions_insee[ ,
 
 ```{r cleanCodePostaux}
 code_postaux <- code_postaux[ , .(code_commune_insee, code_postal)]
+# There is no 1 to 1 mapping, one code postal containing several code insee
+code_postaux <- code_postaux[ , .N, by = .(code_commune_insee, code_postal)]
+code_postaux <- code_postaux[ , .(code_postaux = paste(code_postal, collapse = ", ")), by = .(code_commune_insee)]
 ```
 
 # Merge datasets
@@ -138,7 +141,7 @@ communes_mapping[ , ':='(
 )]
 communes_mapping[ , c("reg", "dep") := NULL]
 communes_mapping <- communes_mapping[ , .(
-  commune_insee_code, code_postal, commune_name, commune_parent_insee_code, commune_type,
+  commune_insee_code, code_postaux, commune_name, commune_parent_insee_code, commune_type,
   departement_insee_code, departement_name, department_cheflieu_insee_code,
   region_insee_code, region_name, region_cheflieu_insee_code
 )]
