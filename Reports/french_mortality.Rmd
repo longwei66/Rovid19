@@ -455,6 +455,10 @@ g
 #### Case of 2020
 
 ```{r mortalityPerDepwith2020}
+# Define the number of colors you want
+nb_cols <- length(unique(communes_mapping$region_name))
+mycolors <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(9, "Dark2"))(nb_cols)
+
 dep_filter <- c(
   "01","02","03","04","05","06","07","08","09"
   ,as.character(10:30)
@@ -495,18 +499,17 @@ g <- g + geom_line(
 # Add 2020 data Smooth
 g <- g + geom_smooth(
   data = my_data_2020
-  , aes( x= common_date_death, y = daily_dep_deaths)
+  , aes( 
+    x= common_date_death
+    , y = daily_dep_deaths
+    #, col = region_name
+    )
   , method = "loess"
   , span = 0.5
   , se = FALSE
-  , col = "darkblue", alpha = 0.8
-  )
-
-g <- g + facet_wrap(
-  facets = . ~ departement_insee_code
-  , ncol = 10
-  , scales = "free_y"
-  )
+  , col = "darkblue"
+  , alpha = 0.8
+  )  #+ scale_color_manual(values = mycolors)
 
 g <- g + theme_minimal() +
     theme(
@@ -530,16 +533,26 @@ g <- g + theme_minimal() +
       , axis.text.y = element_text(size = 5)
       )
 g <- g + scale_x_date(date_labels = "%b/%d") +
-  expand_limits(y = 0) +
-  #ylim(c(0,170)) +
-  geom_vline(
-    xintercept = as.Date("2000-03-15")
-    , color = "darkgrey", size= 0.6, alpha = 0.7 )
+  expand_limits(y = 0) 
+ # ylim(c(0,130)) + xlim(c(as.Date("2000-01-01"), as.Date("2000-06-15"))
+  # geom_vline( xintercept = as.Date("2000-03-15"), color = "darkgrey", size= 0.6, alpha = 0.7 )
 g <- g + ggtitle(
   label = "Daily Mortality in 2020 per departement"
   , subtitle = "vs. 2015 ~ 2019 average") +
   xlab(label = "Date") + ylab("Daily deaths")
-g
+
+h1 <- g + facet_wrap(
+  facets = region_name ~ departement_insee_code
+  , ncol = 10
+  #, scales = "free_y"
+  )
+h2 <- g + facet_wrap(
+  facets = region_name ~ departement_insee_code
+  , ncol = 10
+  , scales = "free_y"
+  )
+h1
+h2
 ```
 
 
