@@ -775,6 +775,118 @@ DT::datatable(france_official_tests_total
 
 
 
+### SI-DEP {.tabset .tabset-face .tabset-pills}
+
+A new information system was set-up on May the 13th.
+
+> Le nouveau système d’information de dépistage (SI-DEP), en déploiement depuis le 13 mai 2020, est une plateforme sécurisée où sont systématiquement enregistrés les résultats des laboratoires des tests (RT-PCR) réalisés par l’ensemble des laboratoires de ville et établissements hospitaliers concernant le SARS-COV2.
+
+> La création de ce système d'information est autorisée pour une durée de 6 mois à compter de la fin de l'état d'urgence sanitaire par application du décret n° 2020-551 du 12 mai 2020 relatif aux systèmes d’information mentionnés à l’article 11 de la loi n° 2020-546 du 11 mai 2020 prorogeant l’état d’urgence sanitaire et complétant ses dispositions.
+
+#### Data Sources
+
+> Le présent jeu de données renseigne à l'échelle départementale et régionale :
+
+>    le taux d'incidence quotidien et hebdomadaire par classe d'âge ;
+>    le taux d’incidence standardisé quotidien et hebdomadaire ;
+>    le taux d'incidence standardisé glissant.
+
+>Le présent jeu de données renseigne à l'échelle nationale :
+
+>    le taux d'incidence quotidien et hebdomadaire par classe d'âge et sexe ;
+>    le taux d’incidence standardisé quotidien et hebdomadaire ;
+>    le taux d'incidence standardisé glissant.
+
+>Le taux d'incidence correspond au nombre de tests positifs pour 100.000 habitants. Il est calculé de la manière suivante :
+>(100000 * nombre de cas positif) / Population
+
+> Précision : Sélection de la première date avec pcr positive si plusieurs prélèvements positifs pour un même patient
+
+
+> Seuls les tests biologiques des personnes pour lesquelles le département de résidence a pu être localisé sont représentés sur les cartes. Les personnes dont le département n’a pas pu être remonté dans les données SIDEP ne sont comptabilisées qu'au niveau France entière. De ce fait la somme des tests indiqués dans les départements ou régions est inférieure au nombre de tests indiqué en France.
+> Le délai de remontée des tests peut excéder 9 jours dans certains cas. Les indicateurs sont ajustés quotidiennement selon la réception des résultats.
+
+
+```{r sourceUriSI-DEP}
+france_official_sidep_dep_url <- "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76"
+france_official_sidep_dep_codebook_url <- "https://www.data.gouv.fr/en/datasets/r/a8b5931a-3aa7-4aec-a81b-8b3de628cf63"
+
+france_official_sidep_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
+
+france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
+
+```
+
+
+#### Data per department
+
+
+```{r}
+france_official_sidep_dep <- data.table::as.data.table(read.csv(file = france_official_sidep_dep_url, sep = ","))
+
+france_official_sidep_dep %>%
+  mutate(date = as.Date(jour)) %>%
+  mutate(cl_age90 = as.factor(cl_age90)) %>%
+  select(-jour) %>%
+  as.data.table()-> france_official_sidep_dep
+
+france_official_sidep_dep <- data.table::as.data.table(merge(
+  france_official_sidep_dep
+  , france_region_departements
+  , by.x = "dep"
+  , by.y = "num_dep"
+))
+```
+
+
+#### Data per regions
+
+We combine now department data per region.
+
+```{r agregatesidepPerRegion}
+france_official_sidep_reg <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(region_name,date,cl_age90) ]
+
+```
+
+
+
+```{r viewsidepDataPerRegion}
+DT::datatable(france_official_sidep_reg
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+#### Data for France
+
+We combine now region data at France level
+
+
+```{r}
+france_official_sidep_total <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(date,cl_age90) ]
+```
+
+
+```{r viewsidepDataPerCountry}
+DT::datatable(france_official_sidep_total
+              #, extensions = 'FixedColumns'
+              , filter = 'top'
+              , class = 'cell-border stripe'
+              , options = list(
+                dom = 't'
+                , scrollX = TRUE
+                , scrollCollapse = TRUE)
+)
+```
+
+
+
 # Analysis of number of cases {.tabset}
 
 Based on John Hopkings University data and visuals and code based from ft.com by  
@@ -1131,22 +1243,22 @@ makeEpicurve(
 ```
 
 ```{r}
-plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-27", mydata = france_com_cases_daily)
+plot_R(my_country = "France", start_date = "2020-02-28", last_date = lubridate::today(), mydata = france_com_cases_daily)
 ```
 
 
 ```{r}
-plot_R(my_country = "France", start_date = "2020-02-28", last_date = "2020-05-27", mydata = france_com_cases_daily_smooth)
+plot_R(my_country = "France", start_date = "2020-02-28", last_date = lubridate::today(), mydata = france_com_cases_daily_smooth)
 ```
 
 
 
 ```{r}
-plot_R(my_country = "Germany", start_date = "2020-03-28", last_date = "2020-05-27", mydata = www_cases_daily)
+plot_R(my_country = "Germany", start_date = "2020-03-28", last_date = lubridate::today(), mydata = www_cases_daily)
 ```
 
 ```{r}
-plot_R(my_country = "Italy", start_date = "2020-02-28", last_date = "2020-05-27", mydata = www_cases_daily)
+plot_R(my_country = "Italy", start_date = "2020-02-28", last_date = lubridate::today(), mydata = www_cases_daily)
 ```
 
 
@@ -2185,3 +2297,94 @@ h <- plotSmallMultipleCovid(
 )
 h
 ```
+
+
+
+
+
+# Analysis of SI-DEP data
+
+Latest available data are from : `r max(france_official_sidep_dep$date)`
+
+
+## France per departments 
+
+```{r plotsidepTotdep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 == 0 ]
+  , myvariable = "p"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h
+```
+
+
+
+### Zoom Ile-de-France
+
+```{r plotsidepTotdep3}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Île-de-France"]
+  , myvariable = "p"
+  , colfeature = "dep" 
+  , facetfeature = "dep"
+  , ncol = 3
+  , mytitle_base = "France SI-DEP positive tests per departements"
+)
+g <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Île-de-France"]
+  , myvariable = "p"
+  , colfeature = "cl_age90" 
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "France SI-DEP positive tests per departements"
+)
+
+h / g
+
+```
+
+
+## France per regions
+
+
+
+```{r plotsidepTotreg}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_reg[ cl_age90 == "0" ]
+  , myvariable = "cases"
+  , colfeature = "region_name" 
+  , facetfeature = "region_name"
+  , mytitle_base = "France SI-DEP positive tests per regions"
+)
+h
+```
+
+
+
+## France total
+
+
+
+```{r plotsidepTotreg3}
+h1 <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_total[ cl_age90 != "0" ]
+  , myvariable = "cases"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90"
+  , mytitle_base = "France SI-DEP positive tests"
+)
+h2 <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_total[ cl_age90 == "0" ]
+  , myvariable = "cases"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90"
+  , mytitle_base = "France SI-DEP positive tests"
+)
+
+h1 / h2
+```
+
+
+
