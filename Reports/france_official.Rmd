@@ -809,11 +809,12 @@ A new information system was set-up on May the 13th.
 
 ```{r sourceUriSI-DEP}
 france_official_sidep_dep_url <- "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76"
+
 france_official_sidep_dep_codebook_url <- "https://www.data.gouv.fr/en/datasets/r/a8b5931a-3aa7-4aec-a81b-8b3de628cf63"
 
-france_official_sidep_reg_url <- "https://www.data.gouv.fr/fr/datasets/r/d2af5160-a21d-47b7-8f30-3c20dade63b1"
+france_official_sidep_reg_url <- "https://www.data.gouv.fr/en/datasets/r/ad09241e-52fa-4be8-8298-e5760b43cae2"
 
-france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
+france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3cc"
 
 ```
 
@@ -821,7 +822,7 @@ france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44
 #### Data per department
 
 
-```{r}
+```{r getSIDEPdep}
 france_official_sidep_dep <- data.table::as.data.table(read.csv(file = france_official_sidep_dep_url, sep = ","))
 
 france_official_sidep_dep %>%
@@ -839,14 +840,37 @@ france_official_sidep_dep <- data.table::as.data.table(merge(
 ```
 
 
-#### Data per regions
-
-We combine now department data per region.
+We can also compute an agregate version per regions to be compared with 
+official data as it's mentioned there can be some gaps (sum of deps != reg).
 
 ```{r agregatesidepPerRegion}
-france_official_sidep_reg <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(region_name,date,cl_age90) ]
+france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(region_name,date,cl_age90) ]
 
 ```
+
+
+
+#### Data per regions
+
+```{r getSIDEPdep}
+france_official_sidep_reg <- data.table::as.data.table(read.csv(file = france_official_sidep_reg_url, sep = ","))
+
+france_official_sidep_reg %>%
+  mutate(date = as.Date(jour)) %>%
+  mutate(cl_age90 = as.factor(cl_age90)) %>%
+  select(-jour) %>%
+  filter( reg != "ZZ" ) %>% # ZZ is empty data
+  mutate( reg = as.numeric(reg)) %>%
+  as.data.table()-> france_official_sidep_reg
+
+france_official_sidep_reg <- data.table::as.data.table(merge(
+  france_official_sidep_reg
+  , regions
+  , by.x = "reg"
+  , by.y = "code_insee"
+))
+```
+
 
 
 
