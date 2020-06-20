@@ -1113,7 +1113,8 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
-last_date <- "2020-05-10"
+last_date <- "2020-06-17"
+r0_date <- "2020-06-17"
 ```
 
 
@@ -1189,7 +1190,7 @@ lambda_plot <- function(my_country, mydata, my_date) {
 ```
 
 ```{r} 
-lambda_plot(my_country = "France", mydata = france_com_cases_daily_smooth, my_date = "2020-05-27")
+lambda_plot(my_country = "France", mydata = france_com_cases_daily_smooth, my_date = r0_date)
 ```
 
 
@@ -1243,22 +1244,22 @@ makeEpicurve(
 ```
 
 ```{r}
-plot_R(my_country = "France", start_date = "2020-02-28", last_date = lubridate::today(), mydata = france_com_cases_daily)
+plot_R(my_country = "France", start_date = r0_date, last_date = lubridate::today(), mydata = france_com_cases_daily)
 ```
 
 
 ```{r}
-plot_R(my_country = "France", start_date = "2020-02-28", last_date = lubridate::today(), mydata = france_com_cases_daily_smooth)
+plot_R(my_country = "France", start_date = r0_date, last_date = lubridate::today(), mydata = france_com_cases_daily_smooth)
 ```
 
 
 
 ```{r}
-plot_R(my_country = "Germany", start_date = "2020-03-28", last_date = lubridate::today(), mydata = www_cases_daily)
+plot_R(my_country = "Germany", start_date = r0_date, last_date = lubridate::today(), mydata = www_cases_daily)
 ```
 
 ```{r}
-plot_R(my_country = "Italy", start_date = "2020-02-28", last_date = lubridate::today(), mydata = www_cases_daily)
+plot_R(my_country = "Italy", start_date = r0_date, last_date = lubridate::today(), mydata = www_cases_daily)
 ```
 
 
