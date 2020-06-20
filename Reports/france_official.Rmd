@@ -814,8 +814,7 @@ france_official_sidep_dep_codebook_url <- "https://www.data.gouv.fr/en/datasets/
 
 france_official_sidep_reg_url <- "https://www.data.gouv.fr/en/datasets/r/ad09241e-52fa-4be8-8298-e5760b43cae2"
 
-france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3cc"
-
+france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
 ```
 
 
@@ -889,13 +888,18 @@ DT::datatable(france_official_sidep_reg
 
 #### Data for France
 
-We combine now region data at France level
 
 
-```{r}
-france_official_sidep_total <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(date,cl_age90) ]
+```{r getSIDEPdep}
+france_official_sidep_total <- data.table::as.data.table(read.csv(file = france_official_sidep_total_url))
+
+france_official_sidep_total %>%
+  mutate(date = as.Date(jour)) %>%
+  mutate(cl_age90 = as.factor(cl_age90)) %>%
+  select(-jour) %>%
+  as.data.table()-> france_official_sidep_total
+
 ```
-
 
 ```{r viewsidepDataPerCountry}
 DT::datatable(france_official_sidep_total
@@ -2378,7 +2382,7 @@ h / g
 ```{r plotsidepTotreg}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_reg[ cl_age90 == "0" ]
-  , myvariable = "cases"
+  , myvariable = "p"
   , colfeature = "region_name" 
   , facetfeature = "region_name"
   , mytitle_base = "France SI-DEP positive tests per regions"
@@ -2395,14 +2399,14 @@ h
 ```{r plotsidepTotreg3}
 h1 <- plotSmallMultipleCovid(
   my_data = france_official_sidep_total[ cl_age90 != "0" ]
-  , myvariable = "cases"
+  , myvariable = "p"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
   , mytitle_base = "France SI-DEP positive tests"
 )
 h2 <- plotSmallMultipleCovid(
   my_data = france_official_sidep_total[ cl_age90 == "0" ]
-  , myvariable = "cases"
+  , myvariable = "p"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
   , mytitle_base = "France SI-DEP positive tests"
