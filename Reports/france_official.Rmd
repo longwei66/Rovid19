@@ -2348,7 +2348,22 @@ h <- plotSmallMultipleCovid(
 h
 ```
 
+```{r plotsidepTotdep}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "92" ]
+  , myvariable = "p"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90"
+)
+g <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 == 0 & dep == "92" ]
+  , myvariable = "p"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h / g
 
+```
 
 ### Zoom Ile-de-France
 
@@ -2356,10 +2371,10 @@ h
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Île-de-France"]
   , myvariable = "p"
-  , colfeature = "dep" 
+  , colfeature = "region_name" 
   , facetfeature = "dep"
-  , ncol = 3
-  , mytitle_base = "France SI-DEP positive tests per departements"
+  #, ncol = 3
+  , mytitle_base = "Ile de France SI-DEP positive tests per departements"
 )
 g <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Île-de-France"]
@@ -2367,12 +2382,52 @@ g <- plotSmallMultipleCovid(
   , colfeature = "cl_age90" 
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "France SI-DEP positive tests per departements"
+  , mytitle_base = "Ile de France SI-DEP positive tests"
 )
-
-h / g
+k <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Île-de-France"]
+  , myvariable = "p"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90" 
+  #, ncol = 3
+  , mytitle_base = "France SI-DEP positive tests per age categories"
+)
+h / g / k
 
 ```
+
+### Zoom Normandie
+
+```{r plotsidepTotdep3}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Normandie"]
+  , myvariable = "p"
+  , colfeature = "region_name" 
+  , facetfeature = "dep_name"
+  #, ncol = 3
+  , mytitle_base = "Normandie SI-DEP positive tests per departements"
+)
+g <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Normandie"]
+  , myvariable = "p"
+  , colfeature = "cl_age90" 
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Normandie SI-DEP positive tests"
+)
+k <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Normandie"]
+  , myvariable = "p"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90" 
+  #, ncol = 3
+  , mytitle_base = "Normandie SI-DEP positive tests per age categories"
+)
+h / g / k
+
+```
+
+
 
 
 ## France per regions
@@ -2402,7 +2457,7 @@ h1 <- plotSmallMultipleCovid(
   , myvariable = "p"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
-  , mytitle_base = "France SI-DEP positive tests"
+  , mytitle_base = "France SI-DEP positive tests per age categories"
 )
 h2 <- plotSmallMultipleCovid(
   my_data = france_official_sidep_total[ cl_age90 == "0" ]
