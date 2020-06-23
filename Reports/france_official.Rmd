@@ -851,7 +851,7 @@ france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(
 
 #### Data per regions
 
-```{r getSIDEPdep}
+```{r getSIDEPreg}
 france_official_sidep_reg <- data.table::as.data.table(read.csv(file = france_official_sidep_reg_url, sep = ","))
 
 france_official_sidep_reg %>%
@@ -890,7 +890,7 @@ DT::datatable(france_official_sidep_reg
 
 
 
-```{r getSIDEPdep}
+```{r getSIDEPtot}
 france_official_sidep_total <- data.table::as.data.table(read.csv(file = france_official_sidep_total_url))
 
 france_official_sidep_total %>%
@@ -1141,8 +1141,8 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
-last_date <- "2020-06-17"
-r0_date <- "2020-06-17"
+last_date <- "2020-06-20"
+r0_date <- "2020-03-01"
 ```
 
 
@@ -1272,7 +1272,7 @@ makeEpicurve(
 ```
 
 ```{r}
-plot_R(my_country = "France", start_date = r0_date, last_date = lubridate::today(), mydata = france_com_cases_daily)
+plot_R(my_country = "France", start_date = r0_date, last_date = last_date, mydata = france_com_cases_daily)
 ```
 
 
@@ -2348,7 +2348,7 @@ h <- plotSmallMultipleCovid(
 h
 ```
 
-```{r plotsidepTotdep}
+```{r plotsidepTotdep2}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "92" ]
   , myvariable = "p"
@@ -2398,7 +2398,7 @@ h / g / k
 
 ### Zoom Normandie
 
-```{r plotsidepTotdep3}
+```{r plotsidepTotdep4}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Normandie"]
   , myvariable = "p"
