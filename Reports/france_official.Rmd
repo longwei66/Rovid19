@@ -161,7 +161,7 @@ compile the data only per country.
 
 ```{r viewJHUDeaths, echo=FALSE}
 DT::datatable(
-  tail(www_deaths_cum,400),
+  tail(www_deaths_cum,400)
   , filter = 'top'
   , class = 'cell-border stripe'
   , options = list(
@@ -339,7 +339,7 @@ france_official_hospital_dep <- data.table::as.data.table(merge(
 #### Data per department
 
 ```{r viewHospitalDataPerDep}
-DT::datatable(france_official_hospital_dep
+DT::datatable(tail(france_official_hospital_dep,200)
               #, extensions = 'FixedColumns'
               , filter = 'top'
               , class = 'cell-border stripe'
@@ -370,7 +370,7 @@ france_official_hospital_dep %>%
 
 
 ```{r viewHospitalDataPerRegion}
-DT::datatable(france_official_reg
+DT::datatable(tail(france_official_reg,100)
               #, extensions = 'FixedColumns'
               , filter = 'top'
               , class = 'cell-border stripe'
@@ -512,7 +512,7 @@ france_age_categories %>%
 
 
 ```{r}
-france_official_emergency_dep <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_url, sep = ","))
+france_official_emergency_dep <- data.table::as.data.table(read.csv(file = france_official_emergency_dep_url, sep = ";"))
 france_official_emergency_dep %>%
   mutate(date = as.Date(date_de_passage)) %>%
   as.data.table()-> france_official_emergency_dep
@@ -544,7 +544,7 @@ DT::datatable(tail(france_official_emergency_dep,100)
 
 
 ```{r}
-france_official_emergency_reg <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_url, sep = ","))
+france_official_emergency_reg <- data.table::as.data.table(read.csv(file = france_official_emergency_reg_url, sep = ";"))
 
 
 regions <- as.data.table(read.csv(
@@ -555,7 +555,7 @@ regions <- regions %>%
   select(code_insee, region_name)
 
 france_official_emergency_reg <- merge(
-  x =france_official_emergency_reg
+  x = france_official_emergency_reg
   , y = regions
   , by.x = "reg"
   , by.y = "code_insee")
@@ -822,7 +822,7 @@ france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44
 
 
 ```{r getSIDEPdep}
-france_official_sidep_dep <- data.table::as.data.table(read.csv(file = france_official_sidep_dep_url, sep = ","))
+france_official_sidep_dep <- data.table::as.data.table(read.csv(file = france_official_sidep_dep_url, sep = ";"))
 
 france_official_sidep_dep %>%
   mutate(date = as.Date(jour)) %>%
@@ -843,7 +843,7 @@ We can also compute an agregate version per regions to be compared with
 official data as it's mentioned there can be some gaps (sum of deps != reg).
 
 ```{r agregatesidepPerRegion}
-france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(p)), by = .(region_name,date,cl_age90) ]
+france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(P)), by = .(region_name,date,cl_age90) ]
 
 ```
 
@@ -852,7 +852,7 @@ france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(
 #### Data per regions
 
 ```{r getSIDEPreg}
-france_official_sidep_reg <- data.table::as.data.table(read.csv(file = france_official_sidep_reg_url, sep = ","))
+france_official_sidep_reg <- data.table::as.data.table(read.csv(file = france_official_sidep_reg_url, sep = ";"))
 
 france_official_sidep_reg %>%
   mutate(date = as.Date(jour)) %>%
@@ -891,7 +891,7 @@ DT::datatable(france_official_sidep_reg
 
 
 ```{r getSIDEPtot}
-france_official_sidep_total <- data.table::as.data.table(read.csv(file = france_official_sidep_total_url))
+france_official_sidep_total <- data.table::as.data.table(read.csv(file = france_official_sidep_total_url, sep = ";"))
 
 france_official_sidep_total %>%
   mutate(date = as.Date(jour)) %>%
@@ -1141,7 +1141,7 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
-last_date <- "2020-06-20"
+last_date <- "2020-07-10"
 r0_date <- "2020-03-01"
 ```
 
@@ -1272,7 +1272,8 @@ makeEpicurve(
 ```
 
 ```{r}
-plot_R(my_country = "France", start_date = r0_date, last_date = last_date, mydata = france_com_cases_daily)
+r_effective_france <- plot_R(my_country = "France", start_date = r0_date, last_date = last_date, mydata = france_com_cases_daily)
+r_effective_france + ylim(c(0,10))
 ```
 
 
@@ -1479,42 +1480,6 @@ idf_icu <- plotSmallMultipleCovid(
 ( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
-
-
-### Zoom : 46 - Lot
-
-```{r plotLot46Hosp}
-idf_home <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
-  , myvariable = "back_home_now"
-  , colfeature = "department"
-  , ncol = 3
-)
-idf_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
-  , myvariable = "hospitalized_now"
-  , colfeature = "department"
-  , ncol = 3
-)
-idf_dead <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
-  , myvariable = "death_cum"
-  , colfeature = "department"
-  , ncol = 3
-)
-idf_icu <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "46" & sex == 0 ]
-  , myvariable = "icu_now"
-  , colfeature = "department"
-  , ncol = 3
-)
-
-
-( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
-
-```
-
-
 
 ## France per Regions {.tabset .tabset-fade  .tabset-pills}
 
@@ -1779,7 +1744,7 @@ icu <- plotLogGrowth(
   , start_case = 100
   , myvariable = "icu_now" #death_cum"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph + gghighlight(department %in% c(75,92)) ) + 
+(home$graph | hosp$graph) / ( icu$graph | death$graph ) + 
   plot_annotation(
     title = "Covid-19 France Hospital data by departments"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
@@ -1789,7 +1754,7 @@ icu <- plotLogGrowth(
 
 ### Per regions
 
-```{r logWorstReg, echo=FALSE}
+```{r logWorstReg, eval=FALSE, include=FALSE}
 my_df <- france_official_reg[ 
   #region_name == "Île-de-France" &
   sex == 0
@@ -1797,7 +1762,7 @@ my_df <- france_official_reg[
 
 home <- plotLogGrowth(
   mydata = my_df
-  , start_case = 200
+  , start_case = 300
   , myvariable = "back_home_now" #death_cum"
   , colfeature = "region_name"
 )
@@ -1830,7 +1795,7 @@ icu <- plotLogGrowth(
 
 ### France Total
 
-```{r logWorstFRTot, echo=FALSE}
+```{r logWorstFRTot, eval=FALSE, include=FALSE}
 my_df <- france_official_hospital_total[ 
   #region_name == "Île-de-France" &
   sex == 0 | TRUE
@@ -2341,7 +2306,7 @@ Latest available data are from : `r max(france_official_sidep_dep$date)`
 ```{r plotsidepTotdep}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == 0 ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "region_name" 
   , facetfeature = "dep"
 )
@@ -2351,13 +2316,13 @@ h
 ```{r plotsidepTotdep2}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "92" ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
 )
 g <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == 0 & dep == "92" ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "region_name" 
   , facetfeature = "dep"
 )
@@ -2370,7 +2335,7 @@ h / g
 ```{r plotsidepTotdep3}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Île-de-France"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "region_name" 
   , facetfeature = "dep"
   #, ncol = 3
@@ -2378,7 +2343,7 @@ h <- plotSmallMultipleCovid(
 )
 g <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Île-de-France"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "region_name"
   , ncol = 3
@@ -2386,7 +2351,7 @@ g <- plotSmallMultipleCovid(
 )
 k <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Île-de-France"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90" 
   #, ncol = 3
@@ -2401,7 +2366,7 @@ h / g / k
 ```{r plotsidepTotdep4}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Normandie"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "region_name" 
   , facetfeature = "dep_name"
   #, ncol = 3
@@ -2409,7 +2374,7 @@ h <- plotSmallMultipleCovid(
 )
 g <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Normandie"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "region_name"
   , ncol = 3
@@ -2417,7 +2382,7 @@ g <- plotSmallMultipleCovid(
 )
 k <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != "0" & region_name == "Normandie"]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90" 
   #, ncol = 3
@@ -2437,7 +2402,7 @@ h / g / k
 ```{r plotsidepTotreg}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_reg[ cl_age90 == "0" ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "region_name" 
   , facetfeature = "region_name"
   , mytitle_base = "France SI-DEP positive tests per regions"
@@ -2454,14 +2419,14 @@ h
 ```{r plotsidepTotreg3}
 h1 <- plotSmallMultipleCovid(
   my_data = france_official_sidep_total[ cl_age90 != "0" ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
   , mytitle_base = "France SI-DEP positive tests per age categories"
 )
 h2 <- plotSmallMultipleCovid(
   my_data = france_official_sidep_total[ cl_age90 == "0" ]
-  , myvariable = "p"
+  , myvariable = "P"
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
   , mytitle_base = "France SI-DEP positive tests"
