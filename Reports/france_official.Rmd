@@ -182,7 +182,7 @@ france_com_url <- "https://www.data.gouv.fr/fr/datasets/r/0b66ca39-1623-4d9c-83a
 
 france_com_cases_cum <- read.csv(file = france_com_url, stringsAsFactors = FALSE) %>%
   filter(source_nom == "Ministère des Solidarités et de la Santé" &
-                            granularite == "pays") %>%
+           granularite == "pays") %>%
   select(date, cas_confirmes) %>%
   mutate(date = as.Date(date), country = "France") %>%
   rename( cases = cas_confirmes) %>%
@@ -1157,7 +1157,7 @@ makeEpicurve <- function(my_data, my_ncol = 3){
       facets = . ~ country
       , ncol = my_ncol
       , scales = "free_y"
-      ) +
+    ) +
     labs(y="Incident cases", 
          title= "COVID-19 incident daily cases") +
     theme(legend.position="top")
@@ -1258,17 +1258,17 @@ plot_R <- function(my_country, start_date, last_date, mydata) {
 ```{r plotEpiCountries}
 makeEpicurve(
   my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
-  ) / 
-( makeEpicurve(
-  my_data = france_com_cases_daily[ country %in% c("France") ]
+) / 
+  ( makeEpicurve(
+    my_data = france_com_cases_daily[ country %in% c("France") ]
   ) +
     makeEpicurve(
-  my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
-  ) +
+      my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
+    ) +
     makeEpicurve(
-  my_data = www_cases_daily[ country %in% c("France") ]
-  ) 
-)
+      my_data = www_cases_daily[ country %in% c("France") ]
+    ) 
+  )
 ```
 
 ```{r}
@@ -1305,6 +1305,7 @@ plotSmallMultipleCovid <- function(
   , myvariable = "death_cum"
   , colfeature = "region_name"
   , facetfeature = "dep_name"
+  , facetscales = "free_y"
   , ncol = 10
   , mytitle_base = "France per departments : "
 ){
@@ -1328,11 +1329,19 @@ plotSmallMultipleCovid <- function(
     scale_fill_manual(values = mycolors) -> g
   
   if(!is.null(facetfeature)){
-    g <- g + facet_wrap(
-      as.formula(paste(". ~ ", facetfeature))
-      , ncol = ncol
-      #, scales = "free_y"
-    )
+    if(is.null(facetscales)){
+      g <- g + facet_wrap(
+        as.formula(paste(". ~ ", facetfeature))
+        , ncol = ncol
+        #, scales = "free_y"
+      )
+    } else {
+      g <- g + facet_wrap(
+        as.formula(paste(". ~ ", facetfeature))
+        , ncol = ncol
+        , scales = facetscales
+      )
+    }
   }
   g + 
     labs(
@@ -1861,7 +1870,7 @@ h <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_pass_corona"
   , colfeature = "region_name" 
-  , facetfeature = "dep"
+  , facetfeature = "dep_name"
 )
 h
 ```
@@ -1875,7 +1884,7 @@ h <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_hospit_corona"
   , colfeature = "region_name" 
-  , facetfeature = "dep"
+  , facetfeature = "dep_name"
 )
 h
 ```
@@ -1890,7 +1899,7 @@ sos <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_acte_tot"
   , colfeature = "region_name" 
-  , facetfeature = "dep"
+  , facetfeature = "dep_name"
 )
 sos
 ```
@@ -1908,7 +1917,7 @@ sos <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" ]
   , myvariable = "nbre_acte_corona"
   , colfeature = "region_name" 
-  , facetfeature = "dep"
+  , facetfeature = "dep_name"
 )
 sos
 ```
@@ -2017,48 +2026,48 @@ idf_sos_coro <- plotSmallMultipleCovid(
 ```
 
 
-### Zoom : Lot - 46
+### Zoom : Mayenne 53
 
 ```{r plotLotER46}
 idf_er_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & dep == "46"]
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & dep == "53"]
   , myvariable = "nbre_pass_tot"
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "Lot 46 - Emergency "
+  , mytitle_base = "Mayenne 53 - Emergency "
 )
 idf_er_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
   , myvariable = "nbre_pass_corona"
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "Lot 46 - Emergency "
+  , mytitle_base = "Mayenne 53 - Emergency "
 )
 idf_er_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
   , myvariable = "nbre_hospit_corona"
   , colfeature = "dep_name"
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "Lot 46 - Emergency "
+  , mytitle_base = "Mayenne 53 - Emergency "
 )
 idf_sos_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
   , myvariable = "nbre_acte_tot"
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "Lot 46 - SOS "
+  , mytitle_base = "Mayenne 53 - SOS "
 )
 idf_sos_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "46"]
+  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
   , myvariable = "nbre_acte_corona"
   , colfeature = "region_name"
   , facetfeature = "region_name"
   , ncol = 3
-  , mytitle_base = "Lot 46 - SOS "
+  , mytitle_base = "Mayenne 53 - SOS "
 )
 
 
@@ -2329,6 +2338,25 @@ g <- plotSmallMultipleCovid(
 h / g
 
 ```
+
+```{r plotsidepTotdep2}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "53" ]
+  , myvariable = "P"
+  , colfeature = "cl_age90" 
+  , facetfeature = "cl_age90"
+  , facetscales = NULL
+)
+g <- plotSmallMultipleCovid(
+  my_data = france_official_sidep_dep[ cl_age90 == 0 & dep == "53" ]
+  , myvariable = "P"
+  , colfeature = "region_name" 
+  , facetfeature = "dep"
+)
+h / g
+
+```
+
 
 ### Zoom Ile-de-France
 

@@ -38,9 +38,11 @@ dataset has insee for source but gather already all past data.
 
 ```{r dataSources}
 # 11Mo csv file 
+# https://www.insee.fr/fr/statistiques/4487988
+#insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
 insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
 # 540Mo csv file
-insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
+insee_dcd_all_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-06-19_detail.zip"
 ```
 
 
@@ -51,7 +53,7 @@ insee_dcd_all_url <- "http://data.cquest.org/insee_deces/insee_deces.csv.gz"
 ```{r getInsee2020}
 insee_dcd_file <- paste0(
   data_storage_url
-  , "insee.fr/mortality/raw/DC_jan2018-mai2020_det.csv"
+  , "insee.fr/mortality/raw/DC_2018-2020.csv"
   )
 dcd_2020 <- data.table::fread(insee_dcd_file)
 ```
