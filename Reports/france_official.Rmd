@@ -960,7 +960,7 @@ my_df <- www_cases_cum %>%
     , "33% daily rise" 
   ))
 
-#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <- 5423
+#my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$cases <-   
 #my_df[ my_df$country == "France" & my_df$date == as.Date("2020-03-15"),]$new_cases <- 5423
 #today <- data.frame(list(country = "France",date = as.Date("2020-03-19"), cases = 32964, days_since_100 = 27, new_cases = 32964))
 #my_df <- rbind(my_df, today)    
@@ -1141,7 +1141,7 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
-last_date <- "2020-07-10"
+last_date <- "2020-08-01"
 r0_date <- "2020-03-01"
 ```
 
@@ -2255,6 +2255,8 @@ h <- plotSmallMultipleCovid(
   , myvariable = "nb_test"
   , colfeature = "region_name" 
   , facetfeature = "region_name"
+  , ncol = 3
+  , facetscales = NULL
 )
 h
 ```
@@ -2268,6 +2270,8 @@ h <- plotSmallMultipleCovid(
   , myvariable = "nb_pos"
   , colfeature = "region_name" 
   , facetfeature = "region_name"
+  , ncol = 3
+  , facetscales = NULL
 )
 h
 ```
@@ -2322,7 +2326,7 @@ h <- plotSmallMultipleCovid(
 h
 ```
 
-```{r plotsidepTotdep2}
+```{r plotsidepTotdep4}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "92" ]
   , myvariable = "P"
@@ -2391,7 +2395,7 @@ h / g / k
 
 ### Zoom Normandie
 
-```{r plotsidepTotdep4}
+```{r plotsidepTotdep41}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 == "0" & region_name == "Normandie"]
   , myvariable = "P"
