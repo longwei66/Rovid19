@@ -100,44 +100,17 @@ by John Hopkings University and released on github.
 ```{r getJHUCasesCum, include=FALSE}
 # get JHU data
 jhu <- Rovid19::getJHUcases() 
+# cum cases
 www_cases_cum <- jhu$cases_cum
 ```
 
 The first dataset availabe records cumulatives cases per countrys/regions. We
 compile the data only per country.
 
-
-```{r viewJHUCasesCum, echo=FALSE}
-DT::datatable(
-  tail(www_cases_cum,400)
-  , filter = 'top'
-  , class = 'cell-border stripe'
-  , options = list(
-    dom = 't'
-    , scrollX = TRUE
-    , scrollCollapse = TRUE
-  )
-)
-```
-
 #### Daily cases per countries
 
 ```{r getJHUCasesDaily, include=FALSE}
 www_cases_daily <- jhu$cases_daily
-```
-
-
-```{r viewJHUCasesDaily, echo=FALSE}
-DT::datatable(
-  tail(www_cases_cum,900)
-  , filter = 'top'
-  , class = 'cell-border stripe'
-  , options = list(
-    dom = 't'
-    , scrollX = TRUE
-    , scrollCollapse = TRUE
-  )
-)
 ```
 
 
@@ -151,34 +124,13 @@ The first dataset availabe records cumulatives deaths per countrys/regions. We
 compile the data only per country.
 
 
-```{r viewJHUDeaths, echo=FALSE}
-DT::datatable(
-  tail(www_deaths_cum,400)
-  , filter = 'top'
-  , class = 'cell-border stripe'
-  , options = list(
-    dom = 't'
-    , scrollX = TRUE
-    , scrollCollapse = TRUE
-  )
-)
-```
-
-
 ### France community gathered offical cases data
 
 #### Cumulative cases in France
 
 ```{r}
-france_com_url <- "https://www.data.gouv.fr/fr/datasets/r/0b66ca39-1623-4d9c-83ad-5434b7f9e2a4"
-
-france_com_cases_cum <- read.csv(file = france_com_url, stringsAsFactors = FALSE) %>%
-  filter(source_nom == "Ministère des Solidarités et de la Santé" &
-           granularite == "pays") %>%
-  select(date, cas_confirmes) %>%
-  mutate(date = as.Date(date), country = "France") %>%
-  rename( cases = cas_confirmes) %>%
-  as.data.table()
+france_com <- Rovid19::getOpenCovidFr()
+france_com_cases_cum <- france_com$cases_cum
 ```
 
 Let's compare JHU data with french offical data. Seems there is an issue in 
@@ -193,19 +145,10 @@ g + ylab("Daily cum covid-19 cases") + ggtitle(label = "Cumulative cases of covi
 ```
 
 
-
-
-
 #### Daily cases in France
 
 ```{r getFrasesDaily, include=FALSE}
-france_com_cases_daily <- france_com_cases_cum %>%
-  arrange( cases ) %>%
-  mutate(
-    daily_cases = c(cases[1], (cases - lag(cases))[-1])
-  ) %>%
-  ungroup() %>%
-  as.data.table()
+france_com_cases_daily <- france_com$cases_daily
 ```
 
 #### Daily cases in France smoothed on3 days
@@ -214,8 +157,6 @@ france_com_cases_daily <- france_com_cases_cum %>%
 france_com_cases_daily_smooth <- copy(france_com_cases_daily)
 france_com_cases_daily_smooth[ , daily_cases :=data.table::frollmean(france_com_cases_daily[, daily_cases], 3) ]
 ```
-
-
 
 We compare these data with JHU data and clearly see the outlier in the reporting.
 
@@ -227,21 +168,6 @@ h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases
 h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases), color = "darkgreen")
 h <- h + ylab("Daily covid-19 cases") + ggtitle(label = "Daily cases of covid-19 in France", subtitle = "Red - JHU data, Blue, French official")
 h
-```
-
-
-
-```{r viewFRCasesDaily, echo=FALSE}
-DT::datatable(
-  france_com_cases_daily
-  , filter = 'top'
-  , class = 'cell-border stripe'
-  , options = list(
-    dom = 't'
-    , scrollX = TRUE
-    , scrollCollapse = TRUE
-  )
-)
 ```
 
 ## Official France Data - Hospital - Emergency - Tests
@@ -273,25 +199,15 @@ From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-r
 > communiquera les anomalies aux services métiers.
 
 
-```{r sourceUriHosp}
-france_official_hospital_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7"
-france_official_hospital_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/3f0f1885-25f4-4102-bbab-edec5a58e34a"
 
-france_region_departements_url <- "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
-```
-
-Autres data - mortalité
-https://www.insee.fr/fr/information/4470857#tableau-figure2_radio1
-
-
-#### Data Struture
+#### Get the Data
 
 ```{r loadCleanFranceOfficialCodebook, echo=FALSE}
-france_official_hospital_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_codebook_url, sep = ";"))
+# Get France hospitalization data
+france_hosp <- getFranceOfficialHosp()
 
-france_official_hospital_dep_codebook %>%
-  rename(Feature = Colonne) %>%
-  mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_hospital_dep_codebook
+# Get codebook
+france_official_hospital_dep_codebook <- france_hosp$hospital_dep_codebook
 
 france_official_hospital_dep_codebook %>%
   select(-Description_FR) %>%
@@ -299,110 +215,14 @@ france_official_hospital_dep_codebook %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 ```
 
-We import these data and merge associate department with their Region names
+We import these data at department level, region level and country level
 
 ```{r}
-france_official_hospital_dep <- data.table::as.data.table(read.csv(file = france_official_hospital_dep_url, sep = ";"))
-france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
-france_official_hospital_dep %>% 
-  rename(
-    department = dep
-    , sex = sexe
-    , date = jour
-    , hospitalized_now = hosp
-    , icu_now = rea
-    , back_home_now = rad
-    , death_cum = dc
-  ) %>%
-  mutate(
-    date = as.Date(date)
-  )-> france_official_hospital_dep
-
-france_official_hospital_dep <- data.table::as.data.table(merge(
-  france_official_hospital_dep
-  , france_region_departements
-  , by.x = "department"
-  , by.y = "num_dep"
-))
+france_official_hospital_dep <- france_hosp$hospital_dep
+france_official_reg <- france_hosp$hospital_reg
+france_official_hospital_total <- france_hosp$hospital_total
 ```
 
-
-
-#### Data per department
-
-```{r viewHospitalDataPerDep}
-DT::datatable(tail(france_official_hospital_dep,200)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-#### Data per regions
-
-We combine now department data per region.
-
-```{r agregateHospPerRegion}
-france_official_hospital_dep %>%
-  group_by(region_name,sex,date) %>%
-  summarise(
-    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
-    , icu_now = sum(icu_now, na.rm = TRUE)
-    , back_home_now = sum(back_home_now, na.rm = TRUE)
-    , death_cum = sum(death_cum, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_reg
-```
-
-
-
-```{r viewHospitalDataPerRegion}
-DT::datatable(tail(france_official_reg,100)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-#### Data for France (Total)
-
-We use department data to aggregate results at Country level
-
-```{r agregateHospTotal}
-france_official_hospital_dep %>%
-  group_by(sex,date) %>%
-  summarise(
-    hospitalized_now = sum(hospitalized_now, na.rm=TRUE)
-    , icu_now = sum(icu_now, na.rm = TRUE)
-    , back_home_now = sum(back_home_now, na.rm = TRUE)
-    , death_cum = sum(death_cum, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  mutate( sex = as.factor(sex)) %>%
-  data.table::as.data.table()-> france_official_hospital_total
-```
-
-
-```{r viewHospitalDataTotal}
-DT::datatable(france_official_hospital_total
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
 
 
 ### Emergency Data (official) {.tabset .tabset-fade .tabset-pills}
