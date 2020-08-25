@@ -47,6 +47,7 @@ library(epitrix)
 library(projections)
 library(earlyR)
 library(distill)
+library(Rovid19)
 
 knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
 # Remove scientific notation
@@ -97,12 +98,9 @@ by John Hopkings University and released on github.
 #### Cumulative cases per countries
 
 ```{r getJHUCasesCum, include=FALSE}
-www_cases_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv") %>%
-  gather(date, cases, 5:ncol(.)) %>%
-  mutate(date = as.Date(date, "%m/%d/%y"))  %>%
-  group_by(country = `Country/Region`, date) %>%
-  summarise(cases = sum(cases)) %>%
-  as.data.table()
+# get JHU data
+jhu <- Rovid19::getJHUcases() 
+www_cases_cum <- jhu$cases_cum
 ```
 
 The first dataset availabe records cumulatives cases per countrys/regions. We
@@ -125,14 +123,7 @@ DT::datatable(
 #### Daily cases per countries
 
 ```{r getJHUCasesDaily, include=FALSE}
-www_cases_daily <- www_cases_cum %>%
-  group_by(country) %>%
-  arrange( cases ) %>%
-  mutate(
-    daily_cases = c(cases[1], (cases - lag(cases))[-1])
-  ) %>%
-  ungroup() %>%
-  as.data.table()
+www_cases_daily <- jhu$cases_daily
 ```
 
 
@@ -153,11 +144,7 @@ DT::datatable(
 ### Deaths per countries (cumulated)
 
 ```{r getJHUDeaths}
-www_deaths_cum <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv") %>%
-  gather(date, cases, 5:ncol(.)) %>%
-  mutate(date = as.Date(date, "%m/%d/%y")) %>%
-  group_by(country = `Country/Region`, date) %>%
-  summarise(cases = sum(cases)) 
+www_deaths_cum <- jhu$deaths_cum
 ```
 
 The first dataset availabe records cumulatives deaths per countrys/regions. We

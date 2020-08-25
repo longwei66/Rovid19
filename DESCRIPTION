@@ -5,7 +5,7 @@ Authors@R:
     person(given = "Barthelemy",
            family = "Longueville",
            role = c("aut", "cre"),
-           email = "longwei66@example.com"
+           email = "longwei66@example.com")
 Description: A package to explore, visualise and model Covid-19 pandemic
 License: GPL-3
 Encoding: UTF-8
