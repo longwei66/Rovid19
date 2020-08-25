@@ -29,7 +29,7 @@ getFranceOfficialHosp <- function(
 
 
   france_official_hospital_dep <- data.table::as.data.table(
-    read.csv(file = france_official_hospital_dep_url, sep = ";")
+    read.csv(file = hospital_dep_url, sep = ";")
     )
 
   france_region_departements <- data.table::as.data.table(

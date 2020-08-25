@@ -35,7 +35,7 @@ getFranceOfficialTests <- function(
     select(code_insee, region_name)
 
   france_official_tests_dep_codebook <- data.table::as.data.table(
-    read.csv(file = france_official_tests_dep_codebook_url
+    read.csv(file = tests_dep_codebook_url
              , sep = ";", header = T, stringsAsFactors = F)
     )
 
