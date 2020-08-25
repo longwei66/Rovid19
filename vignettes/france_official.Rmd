@@ -344,20 +344,16 @@ From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-ho
 > Le fichier mis à disposition contient uniquement les tests réalisés par les 
 > laboratoires de ville. Il ne recense pas l’ensemble des tests réalisés en France.
 
-```{r sourceUriTests}
-france_official_tests_dep_url <- "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20"
-france_official_tests_dep_codebook_url <- "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e"
-```
 
-
-#### Data Structure
+#### Get Data
 
 Dataset per departments :
 
 ```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
-france_official_tests_dep_codebook <- data.table::as.data.table(read.csv(file = france_official_tests_dep_codebook_url, sep = ";", header = T, stringsAsFactors = F))
-#mynames <- as.character(france_official_tests_dep_codebook[1])
-#setnames(france_official_tests_dep_codebook, unlist(mynames))
+# Get France hospitalization data
+france_tests <- getFranceOfficialTests()
+
+france_official_tests_dep_codebook <- france_tests$tests_dep_codebook
 
 france_official_tests_dep_codebook %>%
   select(-Description_FR) %>%
@@ -368,106 +364,9 @@ france_official_tests_dep_codebook %>%
 We import these data and merge associate department with their Region names
 
 ```{r}
-france_official_tests_dep <- data.table::as.data.table(read.csv(file = france_official_tests_dep_url, sep = ";"))
-france_region_departements <- data.table::as.data.table(read.csv(file = france_region_departements_url, sep = ","))
-france_official_tests_dep %>% 
-  rename(
-    department = dep
-    , date = jour
-  ) %>%
-  mutate(
-    date = as.Date(date)
-  )-> france_official_tests_dep
-
-france_official_tests_dep <- data.table::as.data.table(merge(
-  france_official_tests_dep
-  , france_region_departements
-  , by.x = "department"
-  , by.y = "num_dep"
-))
-```
-
-
-#### Data per department (latest)
-
-```{r viewTestslDataPerDep}
-DT::datatable(tail(france_official_tests_dep, 200)
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-#### Data per regions (latest)
-
-We combine now department data per region.
-
-```{r agregateTestsPerRegion}
-france_official_tests_dep %>%
-  group_by(region_name,date,clage_covid) %>%
-  summarise(
-    nb_test = sum(nb_test, na.rm=TRUE)
-    , nb_pos = sum(nb_pos, na.rm = TRUE)
-    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_tests_reg
-```
-
-
-
-```{r viewTestsDataPerRegion}
-DT::datatable(france_official_tests_reg
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-#### Data for France (latest)
-
-We combine now for whole France.
-
-```{r agregateTestTotal}
-france_official_tests_dep %>%
-  group_by(date,clage_covid) %>%
-  summarise(
-    nb_test = sum(nb_test, na.rm=TRUE)
-    , nb_pos = sum(nb_pos, na.rm = TRUE)
-    , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-    , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-    , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-    , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  data.table::as.data.table()-> france_official_tests_total
-```
-
-
-
-```{r viewTestsDataPerTotal}
-DT::datatable(france_official_tests_total
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
+france_official_tests_dep <- france_tests$tests_dep
+france_official_tests_reg <- france_tests$tests_reg
+france_official_tests_total <- france_tests$tests_total
 ```
 
 
@@ -504,35 +403,14 @@ A new information system was set-up on May the 13th.
 > Le délai de remontée des tests peut excéder 9 jours dans certains cas. Les indicateurs sont ajustés quotidiennement selon la réception des résultats.
 
 
-```{r sourceUriSI-DEP}
-france_official_sidep_dep_url <- "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76"
 
-france_official_sidep_dep_codebook_url <- "https://www.data.gouv.fr/en/datasets/r/a8b5931a-3aa7-4aec-a81b-8b3de628cf63"
-
-france_official_sidep_reg_url <- "https://www.data.gouv.fr/en/datasets/r/ad09241e-52fa-4be8-8298-e5760b43cae2"
-
-france_official_sidep_total_url <- "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
-```
-
-
-#### Data per department
+#### Get Data
 
 
 ```{r getSIDEPdep}
-france_official_sidep_dep <- data.table::as.data.table(read.csv(file = france_official_sidep_dep_url, sep = ";"))
-
-france_official_sidep_dep %>%
-  mutate(date = as.Date(jour)) %>%
-  mutate(cl_age90 = as.factor(cl_age90)) %>%
-  select(-jour) %>%
-  as.data.table()-> france_official_sidep_dep
-
-france_official_sidep_dep <- data.table::as.data.table(merge(
-  france_official_sidep_dep
-  , france_region_departements
-  , by.x = "dep"
-  , by.y = "num_dep"
-))
+france_official_sidep_dep <- france_tests$sidep_dep
+france_official_sidep_reg <- france_tests$sidep_reg
+france_official_sidep_total <- france_tests$sidep_total
 ```
 
 
@@ -543,74 +421,6 @@ official data as it's mentioned there can be some gaps (sum of deps != reg).
 france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(P)), by = .(region_name,date,cl_age90) ]
 
 ```
-
-
-
-#### Data per regions
-
-```{r getSIDEPreg}
-france_official_sidep_reg <- data.table::as.data.table(read.csv(file = france_official_sidep_reg_url, sep = ";"))
-
-france_official_sidep_reg %>%
-  mutate(date = as.Date(jour)) %>%
-  mutate(cl_age90 = as.factor(cl_age90)) %>%
-  select(-jour) %>%
-  filter( reg != "ZZ" ) %>% # ZZ is empty data
-  mutate( reg = as.numeric(reg)) %>%
-  as.data.table()-> france_official_sidep_reg
-
-france_official_sidep_reg <- data.table::as.data.table(merge(
-  france_official_sidep_reg
-  , regions
-  , by.x = "reg"
-  , by.y = "code_insee"
-))
-```
-
-
-
-
-```{r viewsidepDataPerRegion}
-DT::datatable(france_official_sidep_reg
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
-#### Data for France
-
-
-
-```{r getSIDEPtot}
-france_official_sidep_total <- data.table::as.data.table(read.csv(file = france_official_sidep_total_url, sep = ";"))
-
-france_official_sidep_total %>%
-  mutate(date = as.Date(jour)) %>%
-  mutate(cl_age90 = as.factor(cl_age90)) %>%
-  select(-jour) %>%
-  as.data.table()-> france_official_sidep_total
-
-```
-
-```{r viewsidepDataPerCountry}
-DT::datatable(france_official_sidep_total
-              #, extensions = 'FixedColumns'
-              , filter = 'top'
-              , class = 'cell-border stripe'
-              , options = list(
-                dom = 't'
-                , scrollX = TRUE
-                , scrollCollapse = TRUE)
-)
-```
-
-
 
 # Analysis of number of cases {.tabset}
 
@@ -838,7 +648,7 @@ si_mean <- 5.0
 si_sd <- 3.4
 alt_si_mean <- 7.5
 alt_si_sd <- 3.4
-last_date <- "2020-08-01"
+last_date <- "2020-08-24"
 r0_date <- "2020-03-01"
 ```
 

@@ -2,6 +2,7 @@
 
 export(getFranceOfficialEmmergency)
 export(getFranceOfficialHosp)
+export(getFranceOfficialTests)
 export(getJHUcases)
 export(getOpenCovidFr)
 import(data.table)
