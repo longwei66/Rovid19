@@ -457,88 +457,19 @@ Rovid19::plotFTlogTrendDeaths(jhu_data = www_deaths_cum)$chart
 We use the following epidemiologic parameters
 
 ```{r}
-si_mean <- 5.0
-si_sd <- 3.4
-alt_si_mean <- 7.5
-alt_si_sd <- 3.4
 last_date <- "2020-08-24"
 r0_date <- "2020-03-01"
 ```
 
 
-
-```{r epidemicCurve}
-makeEpicurve <- function(my_data, my_ncol = 3){
-  my_data %>%
-    select(-cases) %>%
-    ggplot() +
-    geom_bar(aes(x=date, y=daily_cases, fill = country), stat = "identity") +
-    facet_wrap(
-      facets = . ~ country
-      , ncol = my_ncol
-      , scales = "free_y"
-    ) +
-    labs(y="Incident cases", 
-         title= "COVID-19 incident daily cases") +
-    theme(legend.position="top")
-}
-```
-
-
-
-
-
-
-
-```{r}
-prefectural_earlyR <- function(df, my_country, last_date, si_mean, si_sd) {
-  df %>%
-    filter(date <= last_date,
-           !is.na(daily_cases),
-           country == my_country) %>%
-    select(date, daily_cases) %>%
-    uncount(daily_cases) %>%
-    pull(date) -> local_case_dates
-  
-  local_case_dates %>%
-    incidence(., last_date=last_date) -> local_cases
-  
-  res <- get_R(local_cases, si_mean =si_mean, si_sd = si_sd)
-  res$local_case_dates <- local_case_dates
-  res$city <- my_country
-  res$last_date <- last_date
-  res$si_mean <- si_mean
-  res$si_sd <- si_sd
-  return(res)
-}
-
-prefecture_plot_lambda <- function(res) {
-  plot(res, "lambdas", scale = length(res$local_case_dates) + 1,
-       bty="n")
-  title(sub=paste("\nEstimated", expression(lambda), "for", 
-                  res$region, 
-                  "(assuming serial interval mean =",
-                  res$si_mean, 
-                  ", sd =", 
-                  res$si_sd, ")"))
-  abline(v = res$local_case_dates, lwd = 3, col = "grey")
-  abline(v = res$last_date, col = "blue", lty = 2, lwd = 2)
-  points(res$local_case_dates, seq_along(res$local_case_dates), pch = 20, cex = 3)
-}
-
-lambda_plot <- function(my_country, mydata, my_date) {
-  res_obj <- prefectural_earlyR(mydata, 
-                                my_country, 
-                                my_date,
-                                si_mean,
-                                si_sd)
-  
-  prefecture_plot_lambda(res_obj)
-}
-```
-
 ```{r} 
-lambda_plot(my_country = "France", mydata = france_com_cases_daily_smooth, my_date = r0_date)
+Rovid19::lambda_plot(
+  my_country = "France"
+  , mydata = france_com_cases_daily_smooth
+  , my_date = r0_date
+  , si_mean = 5.0 #7.5
+  , si_sd = 3.4 #3.4
+  )
 ```
 
 
@@ -576,16 +507,16 @@ plot_R <- function(my_country, start_date, last_date, mydata) {
 ### Epidemic curves
 
 ```{r plotEpiCountries}
-makeEpicurve(
+Rovid19::makeEpicurve(
   my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
 ) / 
-  ( makeEpicurve(
+  ( Rovid19::makeEpicurve(
     my_data = france_com_cases_daily[ country %in% c("France") ]
   ) +
-    makeEpicurve(
+    Rovid19::makeEpicurve(
       my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
     ) +
-    makeEpicurve(
+    Rovid19::makeEpicurve(
       my_data = www_cases_daily[ country %in% c("France") ]
     ) 
   )
