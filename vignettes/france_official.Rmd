@@ -430,11 +430,12 @@ John Burn-Murdoch ( @jburnmurdoch )
 ## Confirmed cases (cum)
 
 ```{r ftConfirmed}
-Rovid19::plotFTlogTrendCases(jhu_data = www_cases_cum)$chart
+jhu_df <- Rovid19::plotFTlogTrendCases(jhu_data = www_cases_cum)
+jhu_df$chart
 ```
 
 ```{r}
-fr_dates <- my_df %>% filter( country == "France") %>% select(date)
+fr_dates <- jhu_df$data %>% filter( country == "France") %>% select(date)
 ```
 
 
