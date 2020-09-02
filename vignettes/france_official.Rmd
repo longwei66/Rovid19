@@ -422,110 +422,6 @@ france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(
 
 ```
 
-# Analysis of number of cases {.tabset}
-
-Based on John Hopkings University data and visuals and code based from ft.com by  
-John Burn-Murdoch ( @jburnmurdoch )
-
-## Confirmed cases (cum)
-
-```{r ftConfirmed}
-jhu_df <- Rovid19::plotFTlogTrendCases(jhu_data = www_cases_cum)
-jhu_df$chart
-```
-
-```{r}
-fr_dates <- jhu_df$data %>% filter( country == "France") %>% select(date)
-```
-
-
-The lastest availabe data are for France `r max(fr_dates$date)`.
-
-
-## Deaths (cum)
-
-```{r ftDeath}
-Rovid19::plotFTlogTrendDeaths(jhu_data = www_deaths_cum)$chart
-```
-
-
-
-
-## Estimation of R0 {.tabset .tabset-fade .tabset-pills} 
-
-### Analysis functions
-
-We use the following epidemiologic parameters
-
-```{r}
-last_date <- "2020-08-24"
-r0_date <- "2020-03-01"
-```
-
-
-```{r} 
-Rovid19::lambda_plot(
-  my_country = "France"
-  , mydata = france_com_cases_daily_smooth
-  , my_date = r0_date
-  , si_mean = 5.0 #7.5
-  , si_sd = 3.4 #3.4
-  )
-```
-
-
-
-
-
-### Epidemic curves
-
-```{r plotEpiCountries}
-Rovid19::makeEpicurve(
-  my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
-) / 
-  ( Rovid19::makeEpicurve(
-    my_data = france_com_cases_daily[ country %in% c("France") ]
-  ) +
-    Rovid19::makeEpicurve(
-      my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
-    ) +
-    Rovid19::makeEpicurve(
-      my_data = www_cases_daily[ country %in% c("France") ]
-    ) 
-  )
-```
-
-```{r}
-r_effective_france <- Rovid19::plot_R(
-  my_country = "France"
-  , start_date = r0_date
-  , last_date = lubridate::today()
-  , mydata = france_com_cases_daily
-  )
-r_effective_france + ylim(c(0,10))
-```
-
-
-```{r}
-Rovid19::plot_R(
-  my_country = "Germany"
-  , start_date = r0_date
-  , last_date = lubridate::today()
-  , mydata = www_cases_daily
-  )
-```
-
-```{r}
-Rovid19::plot_R(
-  my_country = "Italy"
-  , start_date = r0_date
-  , last_date = lubridate::today()
-  , mydata = www_cases_daily
-  )
-```
-
-
-
 # Analysis of Hospital Data
 
 
@@ -1299,16 +1195,16 @@ idf_sos_coro <- plotSmallMultipleCovid(
 fra_er_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
   , myvariable = "nbre_pass_tot"
-  , colfeature = "fra"
-  , facetfeature = "fra"
+  , colfeature = "reg"
+  , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - Emergency "
 )
 fra_er_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
   , myvariable = "nbre_pass_corona"
-  , colfeature = "fra"
-  , facetfeature = "fra"
+  , colfeature = "reg"
+  , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - Emergency "
 )
@@ -1316,7 +1212,7 @@ fra_er_hosp <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_hospit_corona"
   , colfeature = "sursaud_cl_age_corona"
-  , facetfeature = "fra"
+  , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - Emergency "
 )
@@ -1324,16 +1220,16 @@ fra_er_hosp <- plotSmallMultipleCovid(
 fra_sos_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_acte_tot"
-  , colfeature = "fra"
-  , facetfeature = "fra"
+  , colfeature = "reg"
+  , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - SOS "
 )
 fra_sos_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_acte_corona"
-  , colfeature = "fra"
-  , facetfeature = "fra"
+  , colfeature = "reg"
+  , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - SOS "
 )
@@ -1638,6 +1534,111 @@ h2 <- plotSmallMultipleCovid(
 
 h1 / h2
 ```
+
+
+
+# Analysis of number of cases {.tabset}
+
+Based on John Hopkings University data and visuals and code based from ft.com by  
+John Burn-Murdoch ( @jburnmurdoch )
+
+## Confirmed cases (cum)
+
+```{r ftConfirmed}
+jhu_df <- Rovid19::plotFTlogTrendCases(jhu_data = www_cases_cum)
+jhu_df$chart
+```
+
+```{r}
+fr_dates <- jhu_df$data %>% filter( country == "France") %>% select(date)
+```
+
+
+The lastest availabe data are for France `r max(fr_dates$date)`.
+
+
+## Deaths (cum)
+
+```{r ftDeath}
+Rovid19::plotFTlogTrendDeaths(jhu_data = www_deaths_cum)$chart
+```
+
+
+
+
+## Estimation of R0 {.tabset .tabset-fade .tabset-pills} 
+
+### Analysis functions
+
+We use the following epidemiologic parameters
+
+```{r}
+last_date <- "2020-08-24"
+r0_date <- "2020-03-01"
+```
+
+
+```{r} 
+Rovid19::lambda_plot(
+  my_country = "France"
+  , mydata = france_com_cases_daily_smooth
+  , my_date = r0_date
+  , si_mean = 5.0 #7.5
+  , si_sd = 3.4 #3.4
+  )
+```
+
+
+
+
+
+### Epidemic curves
+
+```{r plotEpiCountries}
+Rovid19::makeEpicurve(
+  my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
+) / 
+  ( Rovid19::makeEpicurve(
+    my_data = france_com_cases_daily[ country %in% c("France") ]
+  ) +
+    Rovid19::makeEpicurve(
+      my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
+    ) +
+    Rovid19::makeEpicurve(
+      my_data = www_cases_daily[ country %in% c("France") ]
+    ) 
+  )
+```
+
+```{r}
+r_effective_france <- Rovid19::plot_R(
+  my_country = "France"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = france_com_cases_daily
+  )
+r_effective_france + ylim(c(0,10))
+```
+
+
+```{r}
+Rovid19::plot_R(
+  my_country = "Germany"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = www_cases_daily
+  )
+```
+
+```{r}
+Rovid19::plot_R(
+  my_country = "Italy"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = www_cases_daily
+  )
+```
+
 
 
 

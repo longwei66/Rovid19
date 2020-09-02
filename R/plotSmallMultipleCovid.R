@@ -31,7 +31,7 @@ plotSmallMultipleCovid <- function(
   my_data %>%
     ggplot2::ggplot(
       aes_string(
-        x="date"
+        x= "date"
         , y= myvariable
       )
     ) +

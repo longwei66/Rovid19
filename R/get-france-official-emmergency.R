@@ -84,14 +84,26 @@ getFranceOfficialEmmergency <- function(
     , by.y = "code_insee")
 
 
-  france_official_emergency_total <- read.csv(
-    file = emergency_total_url, sep = ","
-    , stringsAsFactors = TRUE
-  ) %>%
-    mutate(
-      date = as.Date(date_de_passage)
-    ) %>%
+  # Since July 2nd 2020 the data is not updated
+  # we compute agregated data from regions instead
+  # france_official_emergency_total <- read.csv(
+  #   file = emergency_total_url, sep = ","
+  #   , stringsAsFactors = TRUE
+  # ) %>%
+  #   mutate(
+  #     date = as.Date(date_de_passage)
+  #   ) %>%
+  #   data.table::as.data.table()
+
+  france_official_emergency_total <- france_official_emergency_reg %>%
+    select(-region_name,-reg) %>%
+    group_by(date_de_passage,sursaud_cl_age_corona) %>%
+    summarise_all(sum, na.rm = TRUE) %>%
+    ungroup() %>%
     data.table::as.data.table()
+  france_official_emergency_total[ , reg := "France"]
+  france_official_emergency_total[ , date := as.Date(date_de_passage)]
+
 
 
   return(
