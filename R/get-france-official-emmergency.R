@@ -83,6 +83,7 @@ getFranceOfficialEmmergency <- function(
     , by.x = "reg"
     , by.y = "code_insee")
 
+  france_official_emergency_reg[ , date := as.Date(date_de_passage)]
 
   # Since July 2nd 2020 the data is not updated
   # we compute agregated data from regions instead
@@ -96,7 +97,7 @@ getFranceOfficialEmmergency <- function(
   #   data.table::as.data.table()
 
   france_official_emergency_total <- france_official_emergency_reg %>%
-    select(-region_name,-reg) %>%
+    select(-region_name,-reg, -date) %>%
     group_by(date_de_passage,sursaud_cl_age_corona) %>%
     summarise_all(sum, na.rm = TRUE) %>%
     ungroup() %>%

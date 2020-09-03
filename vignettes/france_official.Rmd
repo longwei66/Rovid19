@@ -23,9 +23,10 @@ vignette: >
   %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-
 ---
 
+
+  
 ```{r loadLibs, include=FALSE}
 library(tidyverse)
 library(data.table)
@@ -977,6 +978,82 @@ sos
 
 ## France per regions {.tabset  .tabset-fade .tabset-pills}
 
+### Total ER daily visits
+
+```{r plotERTotreg}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_reg[ sursaud_cl_age_corona != "0" ]
+  , myvariable = "nbre_pass_tot"
+  , colfeature = "sursaud_cl_age_corona"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Regions - Emergency "
+)
+h
+```
+
+
+### ER daily visits for suspicion of COVID-19
+
+```{r plotERCovidreg}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_reg[ sursaud_cl_age_corona != "0" ]
+  , myvariable = "nbre_pass_corona"
+  , colfeature = "sursaud_cl_age_corona"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Regions - ER daily visits "
+)
+h
+```
+
+
+### Daily hospitalization for COVID-19
+
+```{r plotHospCovidreg}
+h <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_reg[ sursaud_cl_age_corona != "0" ]
+  , myvariable = "nbre_hospit_corona"
+  , colfeature = "sursaud_cl_age_corona"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Regions - Daily hospitalization "
+)
+h
+```
+
+
+### Total Daily medical acts (SOS Médecin)
+
+```{r plotSOSTotalreg}
+sos <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_reg[ sursaud_cl_age_corona == "0" ]
+  , myvariable = "nbre_acte_tot"
+  , colfeature = "region_name"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Regions - Total Daily medical acts (SOS Médecin)"
+)
+sos
+```
+
+
+### Daily medical acts (SOS Médecin) for suspicion of COVID-19
+
+```{r plotSOSCovidreg}
+sos <- plotSmallMultipleCovid(
+  my_data = france_official_emergency_reg[ sursaud_cl_age_corona != "0" ]
+  , myvariable = "nbre_acte_corona"
+  , colfeature = "sursaud_cl_age_corona"
+  , facetfeature = "region_name"
+  , ncol = 3
+  , mytitle_base = "Regions - Daily medical acts (SOS Médecin) for suspicion of COVID-19"
+)
+sos
+```
+
+
+
 
 ### Zoom : Ile de France
 
@@ -1497,9 +1574,9 @@ h / g / k
 
 ```{r plotsidepTotreg}
 h <- plotSmallMultipleCovid(
-  my_data = france_official_sidep_reg[ cl_age90 == "0" ]
+  my_data = france_official_sidep_reg[ cl_age90 != "0" ]
   , myvariable = "P"
-  , colfeature = "region_name" 
+  , colfeature = "cl_age90" 
   , facetfeature = "region_name"
   , mytitle_base = "France SI-DEP positive tests per regions"
   , facetscales = NULL
@@ -1535,6 +1612,17 @@ h2 <- plotSmallMultipleCovid(
 h1 / h2
 ```
 
+```{r}
+library(viridis)
+g <- ggplot(france_official_sidep_reg[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
+  geom_tile() + 
+  facet_wrap(facets = . ~ region_name) +
+  scale_fill_viridis(
+    option = "magma" #"heat"
+    , direction = -1
+    )
+g
+```
 
 
 # Analysis of number of cases {.tabset}
@@ -1585,7 +1673,7 @@ Rovid19::lambda_plot(
   , my_date = r0_date
   , si_mean = 5.0 #7.5
   , si_sd = 3.4 #3.4
-  )
+)
 ```
 
 
@@ -1616,7 +1704,7 @@ r_effective_france <- Rovid19::plot_R(
   , start_date = r0_date
   , last_date = lubridate::today()
   , mydata = france_com_cases_daily
-  )
+)
 r_effective_france + ylim(c(0,10))
 ```
 
@@ -1627,7 +1715,7 @@ Rovid19::plot_R(
   , start_date = r0_date
   , last_date = lubridate::today()
   , mydata = www_cases_daily
-  )
+)
 ```
 
 ```{r}
@@ -1636,7 +1724,7 @@ Rovid19::plot_R(
   , start_date = r0_date
   , last_date = lubridate::today()
   , mydata = www_cases_daily
-  )
+)
 ```
 
 
