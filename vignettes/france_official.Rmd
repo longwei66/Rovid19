@@ -38,7 +38,7 @@ library(gghighlight)
 library(plotly)
 library(patchwork)
 library(shadowtext)
-
+library(viridis)
 library(gt)
 library(deSolve)
 library(EpiEstim)
@@ -1457,6 +1457,23 @@ h <- plotSmallMultipleCovid(
 h
 ```
 
+Heatmap
+
+```{r heatmapPerDep}
+g <- ggplot(france_official_sidep_dep[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
+  geom_tile() + 
+  facet_wrap(facets = . ~ dep_name, ncol = 10) +
+  scale_fill_viridis(
+    option = "magma" #"heat"
+    , direction = -1
+    )
+g
+```
+
+
+
+### Hauts-de-Seine
+
 ```{r plotsidepTotdep4}
 h <- plotSmallMultipleCovid(
   my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "92" ]
@@ -1476,6 +1493,8 @@ g <- plotSmallMultipleCovid(
 h / g
 
 ```
+
+### Mayenne
 
 ```{r plotsidepTotdep2}
 h <- plotSmallMultipleCovid(
@@ -1586,6 +1605,17 @@ h
 ```
 
 
+```{r heatmapPerRegions}
+g <- ggplot(france_official_sidep_reg[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
+  geom_tile() + 
+  facet_wrap(facets = . ~ region_name) +
+  scale_fill_viridis(
+    option = "magma" #"heat"
+    , direction = -1
+    )
+g
+```
+
 
 ## France total
 
@@ -1612,17 +1642,7 @@ h2 <- plotSmallMultipleCovid(
 h1 / h2
 ```
 
-```{r}
-library(viridis)
-g <- ggplot(france_official_sidep_reg[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
-  geom_tile() + 
-  facet_wrap(facets = . ~ region_name) +
-  scale_fill_viridis(
-    option = "magma" #"heat"
-    , direction = -1
-    )
-g
-```
+
 
 
 # Analysis of number of cases {.tabset}
