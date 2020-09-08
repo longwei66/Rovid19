@@ -943,8 +943,37 @@ h <- plotSmallMultipleCovid(
 h
 ```
 
+Heatmap
+
+```{r heatmapPerDep}
+g <- ggplot(france_official_emergency_dep[ sursaud_cl_age_corona != "0" ], aes(date, sursaud_cl_age_corona, fill= nbre_hospit_corona)) +
+  geom_tile() + 
+  facet_wrap(facets = . ~ dep_name, ncol = 10) +
+  scale_fill_viridis(
+    option = "magma" #"heat"
+    , direction = -1
+    )
+g
+```
 
 
+```{r heatmapPerDep2}
+g <- ggplot(france_official_emergency_dep[ sursaud_cl_age_corona != "0"  & dep %in% c("13","75","92")], aes(date, sursaud_cl_age_corona, fill= nbre_hospit_corona)) +
+  geom_tile() + 
+  facet_wrap(facets = . ~ dep_name, ncol = 10) +
+  scale_fill_viridis(
+    option = "magma" #"heat"
+    , direction = -1
+    )
+g
+```
+
+
+E	75 et plus
+D	65-74 ans
+C	45-64 ans
+B	15-44 ans
+A	moins de 15 ans
 
 ### Total Daily medical acts (SOS Médecin)
 
@@ -1459,7 +1488,7 @@ h
 
 Heatmap
 
-```{r heatmapPerDep}
+```{r heatmapPerDep3}
 g <- ggplot(france_official_sidep_dep[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
   geom_tile() + 
   facet_wrap(facets = . ~ dep_name, ncol = 10) +
