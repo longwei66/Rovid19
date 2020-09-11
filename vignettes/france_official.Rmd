@@ -1299,17 +1299,17 @@ idf_sos_coro <- plotSmallMultipleCovid(
 
 ```{r plotErFT}
 fra_er_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_pass_tot"
-  , colfeature = "reg"
+  , colfeature = "sursaud_cl_age_corona"
   , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - Emergency "
 )
 fra_er_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_total[ sursaud_cl_age_corona == "0"]
+  my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_pass_corona"
-  , colfeature = "reg"
+  , colfeature = "sursaud_cl_age_corona"
   , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - Emergency "
@@ -1326,7 +1326,7 @@ fra_er_hosp <- plotSmallMultipleCovid(
 fra_sos_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_acte_tot"
-  , colfeature = "reg"
+  , colfeature = "sursaud_cl_age_corona"
   , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - SOS "
@@ -1334,7 +1334,7 @@ fra_sos_tot <- plotSmallMultipleCovid(
 fra_sos_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_total[ sursaud_cl_age_corona != "0"]
   , myvariable = "nbre_acte_corona"
-  , colfeature = "reg"
+  , colfeature = "sursaud_cl_age_corona"
   , facetfeature = "reg"
   , ncol = 3
   , mytitle_base = "France - SOS "
