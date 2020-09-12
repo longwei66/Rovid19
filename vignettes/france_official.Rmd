@@ -1114,7 +1114,7 @@ idf_er_hosp <- plotSmallMultipleCovid(
 idf_sos_tot <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_acte_tot"
-  , colfeature = "region_name"
+  , colfeature = "rsursaud_cl_age_corona"
   , facetfeature = "region_name"
   , ncol = 3
   , mytitle_base = "Ile de France - SOS "
@@ -1122,7 +1122,7 @@ idf_sos_tot <- plotSmallMultipleCovid(
 idf_sos_coro <- plotSmallMultipleCovid(
   my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Île-de-France"]
   , myvariable = "nbre_acte_corona"
-  , colfeature = "region_name"
+  , colfeature = "sursaud_cl_age_corona"
   , facetfeature = "region_name"
   , ncol = 3
   , mytitle_base = "Ile de France - SOS "
