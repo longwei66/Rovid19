@@ -1,0 +1,466 @@
+---
+title: "Analysing COVID-19 (2019-nCoV) outbreak in France"
+draft: true
+description: "A further exploration of COVID-19 incidence data using R tools and packages."
+categories:
+  - R
+  - "COVID-19"
+author:
+  - name: Barthélémy Longueville for datapleth.io
+creative_commons: CC BY-SA
+twitter:
+  creator: "@datapleth"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+    self_contained: true
+    number_sections: true
+vignette: >
+%\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  ---
+  
+  
+  
+  ```{r loadLibs, include=FALSE}
+library(tidyverse)
+library(data.table)
+library(kableExtra)
+library(DT)
+library(RColorBrewer)
+library(ggplot2)
+library(gghighlight)
+library(plotly)
+library(patchwork)
+library(shadowtext)
+library(viridis)
+library(gt)
+library(deSolve)
+library(EpiEstim)
+library(incidence)
+library(distcrete)
+library(epitrix)
+library(projections)
+library(earlyR)
+library(distill)
+library(Rovid19)
+
+knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
+# Remove scientific notation
+options(scipen=999)
+```
+
+
+
+
+# Introduction & Objectives
+
+This documents provides an analysis of Covid-19 outbreak in France based on 
+offical data, and community data. We also include some comparison with other
+countries such as Italy.
+
+We will use different types and granularity of data such as :
+
+- number of covid-19 case at country level
+- official hospital daily data (back home, currently hospitalized, currently in ICU & deaths), at country, region, department levels
+- officiel emergency daily data (ER visits, ER visits for covid, hospitalization for covid-19, SOS médecins act, SOS médecins covid-19 acts) at country, regional and department levels.
+- official tests done at country, region and department levels.
+
+Another report of this project is focusing on mortality (see references).
+
+Visualisation and some elements of code are inspired by the best reference we
+found during this period :
+
+- John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
+- Tim Churches with scientist at South Western Sydney Clinical School, UNSW 
+Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, 
+Australia. ( [link](https://swscs.med.unsw.edu.au) and his 
+work [here](https://timchurches.github.io/blog/))
+
+This report is published under creative common CC BY-SA, and code should be
+GPL 3.0
+
+
+
+# Covid-19 Data - France and other countries
+
+## Wordlwide cases and deaths - John Hopkings 
+
+Over the weeks, one accademic source of data became the reference, it's issued
+by John Hopkings University and released on github.
+
+### Number of cases  {.tabset .tabset-fade .tabset-pills} 
+
+#### Cumulative cases per countries
+
+```{r getJHUCasesCum, include=FALSE}
+# get JHU data
+jhu <- Rovid19::getJHUcases() 
+# cum cases
+www_cases_cum <- jhu$cases_cum
+```
+
+The first dataset availabe records cumulatives cases per countrys/regions. We
+compile the data only per country.
+
+#### Daily cases per countries
+
+```{r getJHUCasesDaily, include=FALSE}
+www_cases_daily <- jhu$cases_daily
+```
+
+
+### Deaths per countries (cumulated)
+
+```{r getJHUDeaths}
+www_deaths_cum <- jhu$deaths_cum
+```
+
+The first dataset availabe records cumulatives deaths per countrys/regions. We
+compile the data only per country.
+
+
+### France community gathered offical cases data
+
+#### Cumulative cases in France
+
+```{r}
+france_com <- Rovid19::getOpenCovidFr()
+france_com_cases_cum <- france_com$cases_cum
+```
+
+Let's compare JHU data with french offical data. Seems there is an issue in 
+data from JHU for Cumulated cases. We will use official french data which 
+seems to be more reliable (there is a big jump in cases mid april).
+
+```{r compareJHUFrance, echo=FALSE}
+g <- ggplot()
+g <- g + geom_point(data = www_cases_cum[ country == "France"], aes(x = date, y = cases), color = "firebrick")
+g <- g + geom_point(data = france_com_cases_cum, aes(x = date, y = cases), color = "darkblue")
+g + ylab("Daily cum covid-19 cases") + ggtitle(label = "Cumulative cases of covid-19 in France", subtitle = "Red - JHU data, Blue, French official")
+```
+
+
+#### Daily cases in France
+
+```{r getFrasesDaily, include=FALSE}
+france_com_cases_daily <- france_com$cases_daily
+```
+
+#### Daily cases in France smoothed on3 days
+
+```{r makeDailyAvera}
+france_com_cases_daily_smooth <- copy(france_com_cases_daily)
+france_com_cases_daily_smooth[ , daily_cases :=data.table::frollmean(france_com_cases_daily[, daily_cases], 3) ]
+```
+
+We compare these data with JHU data and clearly see the outlier in the reporting.
+
+
+```{r compareJHUFranceDaily, echo=FALSE}
+h <- ggplot()
+h <- h + geom_point(data = www_cases_daily[ country == "France"], aes(x = date, y = daily_cases), color = "firebrick")
+h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases), color = "darkblue")
+h <- h + geom_point(data = france_com_cases_daily, aes(x = date, y = daily_cases), color = "darkgreen")
+h <- h + ylab("Daily covid-19 cases") + ggtitle(label = "Daily cases of covid-19 in France", subtitle = "Red - JHU data, Blue, French official")
+h
+```
+
+## Official France Data - Hospital - Emergency - Tests
+### Hospital data (official) {.tabset .tabset-fade .tabset-pills} 
+
+#### Data Sources
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-hospitalieres-relatives-a-lepidemie-de-covid-19/)
+
+> Le présent jeu de données renseigne sur la situation hospitalières concernant
+> l'épidémie de COVID-19 :
+
+> Deux fichiers sont proposés :
+
+> 1/ Les données hospitalières quotidiennes relatives à l'épidémie du COVID-19 par 
+> département et sexe du patient : nombre de patients hospitalisés, nombre de 
+> personnes actuellement en réanimation ou soins intensifs, nombre cumulé de 
+> personnes retournées à domicile, nombre cumulé de personnes décédées.
+
+> 2/ Les données quotidiennes relatives aux établissements hospitaliers par
+> département : nombre cumulé de services ayant déclaré au moins un cas.
+> Pour chacun des fichiers, une fiche de métadonnées est proposée.
+
+> Attention : certains fichiers peuvent également comporter des anomalies. 
+> N'hésitez pas à les signaler en commentaire. Santé publique France 
+> communiquera les anomalies aux services métiers.
+
+
+
+#### Get the Data
+
+```{r loadCleanFranceOfficialCodebook, echo=FALSE}
+# Get France hospitalization data
+france_hosp <- getFranceOfficialHosp()
+
+# Get codebook
+france_official_hospital_dep_codebook <- france_hosp$hospital_dep_codebook
+
+france_official_hospital_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We import these data at department level, region level and country level
+
+```{r}
+france_official_hospital_dep <- france_hosp$hospital_dep
+france_official_reg <- france_hosp$hospital_reg
+france_official_hospital_total <- france_hosp$hospital_total
+```
+
+
+
+### Emergency Data (official) {.tabset .tabset-fade .tabset-pills}
+
+This covers emergency GP ( SOS Medecins ) & Hospital Emergency Wards, per region and per department.
+
+#### Data Sources
+
+
+Since Friday march 27th, French government is publishing data for hospital and
+health network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+
+> Description du jeu de données
+> Quatre fichiers sont proposés :
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> département, sexe et tranche d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre total d’actes médicaux SOS Médecins pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins.
+
+
+> Les données quotidiennes de SOS médecins et des urgences hospitalières par
+> région, sexe et tranches d’âge des patients : nombre de passages aux
+> urgences pour suspicion de COVID-19, nombre total de passages aux urgences,
+> nombre d’hospitalisations parmi les passages aux urgences pour suspicion de
+> COVID-19, nombre d’actes médicaux SOS Médecins pour suspicion de COVID-19,
+> nombre d’actes médicaux SOS Médecins total. Le code région correspond au
+> code INSEE publié par l’INSEE sur www.data.gouv.fr.
+
+
+#### Get the Data
+
+Dataset per departments :
+
+```{r loadCleanFranceOfficialERdepCodebook, echo=FALSE}
+# Get France hospitalization data
+france_emmergency <- getFranceOfficialEmmergency()
+
+
+france_emmergency$emergency_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Dataset per Regions :
+
+```{r loadCleanFranceOfficialERregCodebook, echo=FALSE}
+france_emmergency$emergency_reg_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Age categories
+
+```{r getAgeCategories}
+france_emmergency$age_categories %>%
+  #select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+
+```
+
+
+
+```{r}
+france_official_emergency_dep <- france_emmergency$emergency_dep
+france_official_emergency_reg <- france_emmergency$emergency_reg
+france_official_emergency_total <- france_emmergency$emergency_total
+```
+
+
+
+### Covid tests data (Official) {.tabset .tabset-face .tabset-pills}
+
+This covers test data for tests done in city laboratory per department and age
+range.
+
+#### Data Sources
+
+
+Since Monday April 6th, French government is publishing data for tests network.
+
+From [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/donnees-des-urgences-hospitalieres-et-de-sos-medecins-relatives-a-lepidemie-de-covid-19/#_)
+
+> Le présent jeu de données renseigne sur le nombre de tests de dépistage du 
+> COVID-19 réalisés par les laboratoires de villes, par département et par sexe :
+
+> Nombre de tests réalisés ;
+> Nombre de tests positifs.
+> Un fichier quotidien et un fichier hebdomadaire sont proposés.
+
+> Mode de production des données
+> Le système de surveillance, appelé 3labos, repose sur la remontée automatisée 
+> des données individuelles de trois laboratoires centralisateurs de 
+> prélèvements (France métropolitaine et DOM) : Eurofins Biomnis et Cerba. Les 
+> objectifs de ce système de surveillance sont le suivi des tendances 
+> temporo-spatiales de maladies infectieuses ciblées, la contribution à 
+> l’investigation d’épidémies et l’apport de données complémentaires aux 
+> systèmes de surveillance existants.
+
+> Dans le cadre de l'épidémie de COVID-19, des données sont transmises 
+> quotidiennement et incluent le résultat biologique (réalisé par PCR), l’âge, 
+> le sexe et le département du patient ou du laboratoire préleveur.
+
+> Les données sont transmises quotidiennement à Santé publique France, avec un 
+> certain délai entre la date de prélèvement et la réalisation du test. Ces 
+> délais comprennent le temps d’acheminement de l’échantillon, la réalisation 
+> du test, le traitement administratif du dossier et son enregistrement dans 
+> le système d’information.
+
+> Éléments d'attention
+> Le fichier mis à disposition contient uniquement les tests réalisés par les 
+> laboratoires de ville. Il ne recense pas l’ensemble des tests réalisés en France.
+
+
+#### Get Data
+
+Dataset per departments :
+
+```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
+# Get France hospitalization data
+france_tests <- getFranceOfficialTests()
+
+france_official_tests_dep_codebook <- france_tests$tests_dep_codebook
+
+france_official_tests_dep_codebook %>%
+  select(-Description_FR) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+We import these data and merge associate department with their Region names
+
+```{r}
+france_official_tests_dep <- france_tests$tests_dep
+france_official_tests_reg <- france_tests$tests_reg
+france_official_tests_total <- france_tests$tests_total
+```
+
+
+
+### SI-DEP {.tabset .tabset-face .tabset-pills}
+
+A new information system was set-up on May the 13th.
+
+> Le nouveau système d’information de dépistage (SI-DEP), en déploiement depuis le 13 mai 2020, est une plateforme sécurisée où sont systématiquement enregistrés les résultats des laboratoires des tests (RT-PCR) réalisés par l’ensemble des laboratoires de ville et établissements hospitaliers concernant le SARS-COV2.
+
+> La création de ce système d'information est autorisée pour une durée de 6 mois à compter de la fin de l'état d'urgence sanitaire par application du décret n° 2020-551 du 12 mai 2020 relatif aux systèmes d’information mentionnés à l’article 11 de la loi n° 2020-546 du 11 mai 2020 prorogeant l’état d’urgence sanitaire et complétant ses dispositions.
+
+#### Data Sources
+
+> Le présent jeu de données renseigne à l'échelle départementale et régionale :
+
+>    le taux d'incidence quotidien et hebdomadaire par classe d'âge ;
+>    le taux d’incidence standardisé quotidien et hebdomadaire ;
+>    le taux d'incidence standardisé glissant.
+
+>Le présent jeu de données renseigne à l'échelle nationale :
+
+>    le taux d'incidence quotidien et hebdomadaire par classe d'âge et sexe ;
+>    le taux d’incidence standardisé quotidien et hebdomadaire ;
+>    le taux d'incidence standardisé glissant.
+
+>Le taux d'incidence correspond au nombre de tests positifs pour 100.000 habitants. Il est calculé de la manière suivante :
+>(100000 * nombre de cas positif) / Population
+
+> Précision : Sélection de la première date avec pcr positive si plusieurs prélèvements positifs pour un même patient
+
+
+> Seuls les tests biologiques des personnes pour lesquelles le département de résidence a pu être localisé sont représentés sur les cartes. Les personnes dont le département n’a pas pu être remonté dans les données SIDEP ne sont comptabilisées qu'au niveau France entière. De ce fait la somme des tests indiqués dans les départements ou régions est inférieure au nombre de tests indiqué en France.
+> Le délai de remontée des tests peut excéder 9 jours dans certains cas. Les indicateurs sont ajustés quotidiennement selon la réception des résultats.
+
+
+
+#### Get Data
+
+
+```{r getSIDEPdep}
+france_official_sidep_dep <- france_tests$sidep_dep
+france_official_sidep_reg <- france_tests$sidep_reg
+france_official_sidep_total <- france_tests$sidep_total
+```
+
+
+We can also compute an agregate version per regions to be compared with 
+official data as it's mentioned there can be some gaps (sum of deps != reg).
+
+```{r agregatesidepPerRegion}
+france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(P)), by = .(region_name,date,cl_age90) ]
+
+```
+
+
+# Save dataset
+
+```{r saveDatasets}
+save(
+  france_com,
+  france_com_cases_cum,
+  france_com_cases_daily,
+  france_com_cases_daily_smooth,
+  france_emmergency,
+  france_hosp,
+  france_official_emergency_dep,
+  france_official_emergency_reg,
+  france_official_emergency_total,
+  france_official_hospital_dep,
+  france_official_hospital_dep_codebook,
+  france_official_hospital_total,
+  france_official_reg,
+  france_official_sidep_dep,
+  france_official_sidep_dep_agg_reg,
+  france_official_sidep_reg,
+  france_official_sidep_total,
+  france_official_tests_dep,
+  france_official_tests_dep_codebook,
+  france_official_tests_reg,
+  france_official_tests_total,
+  france_tests,
+  jhu,
+  www_cases_cum,
+  www_cases_daily,
+  www_deaths_cum
+  , file = paste0("./",lubridate::today(),"_rovid-data.Rda")
+)
+file.copy(
+  from = paste0("./",lubridate::today(),"_rovid-data.Rda")
+  , to = "./latest/latest_rovid.Rda"
+  , overwrite = TRUE
+  )
+
+```
+

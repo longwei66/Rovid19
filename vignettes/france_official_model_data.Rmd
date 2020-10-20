@@ -1,0 +1,176 @@
+---
+title: "Analysing COVID-19 (2019-nCoV) outbreak in France"
+draft: true
+description: "A further exploration of COVID-19 incidence data using R tools and packages."
+categories:
+  - R
+  - "COVID-19"
+author:
+  - name: Barthélémy Longueville for datapleth.io
+creative_commons: CC BY-SA
+twitter:
+  creator: "@datapleth"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+    self_contained: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+  
+```{r loadLibs, include=FALSE}
+library(tidyverse)
+library(data.table)
+library(kableExtra)
+library(DT)
+library(RColorBrewer)
+library(ggplot2)
+library(gghighlight)
+library(plotly)
+library(patchwork)
+library(shadowtext)
+library(viridis)
+library(gt)
+library(deSolve)
+library(EpiEstim)
+library(incidence)
+library(distcrete)
+library(epitrix)
+library(projections)
+library(earlyR)
+library(distill)
+library(Rovid19)
+
+knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
+# Remove scientific notation
+options(scipen=999)
+```
+
+
+
+
+# Introduction & Objectives
+
+This documents provides an analysis of Covid-19 outbreak in France based on 
+offical data, and community data. We also include some comparison with other
+countries such as Italy.
+
+We will use different types and granularity of data such as :
+
+- number of covid-19 case at country level
+- official hospital daily data (back home, currently hospitalized, currently in ICU & deaths), at country, region, department levels
+- officiel emergency daily data (ER visits, ER visits for covid, hospitalization for covid-19, SOS médecins act, SOS médecins covid-19 acts) at country, regional and department levels.
+- official tests done at country, region and department levels.
+
+Another report of this project is focusing on mortality (see references).
+
+Visualisation and some elements of code are inspired by the best reference we
+found during this period :
+
+- John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
+- Tim Churches with scientist at South Western Sydney Clinical School, UNSW 
+Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, 
+Australia. ( [link](https://swscs.med.unsw.edu.au) and his 
+work [here](https://timchurches.github.io/blog/))
+
+This report is published under creative common CC BY-SA, and code should be
+GPL 3.0
+
+
+
+# Covid-19 Data - France and other countries
+
+We load data prepared in the notebook named "rance_officifal_get_data.Rmd".
+
+```{r}
+load(file = "./latest/latest_rovid.Rda")
+```
+
+
+
+
+# Estimation of R0 {.tabset .tabset-fade .tabset-pills} 
+
+### Analysis functions
+
+We use the following epidemiologic parameters
+
+```{r}
+last_date <- "2020-08-24"
+r0_date <- "2020-03-01"
+```
+
+
+```{r} 
+Rovid19::lambda_plot(
+  my_country = "France"
+  , mydata = france_com_cases_daily_smooth
+  , my_date = r0_date
+  , si_mean = 5.0 #7.5
+  , si_sd = 3.4 #3.4
+)
+```
+
+
+
+
+
+### Epidemic curves
+
+```{r plotEpiCountries}
+Rovid19::makeEpicurve(
+  my_data = www_cases_daily[ country %in% c("Italy","United Kingdom", "US", "Germany", "Sweden", "Russia", "Brazil", "Korea, South") ]
+) / 
+  ( Rovid19::makeEpicurve(
+    my_data = france_com_cases_daily[ country %in% c("France") ]
+  ) +
+    Rovid19::makeEpicurve(
+      my_data = france_com_cases_daily_smooth[ country %in% c("France") ]
+    ) +
+    Rovid19::makeEpicurve(
+      my_data = www_cases_daily[ country %in% c("France") ]
+    ) 
+  )
+```
+
+```{r}
+r_effective_france <- Rovid19::plot_R(
+  my_country = "France"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = france_com_cases_daily
+)
+r_effective_france + ylim(c(0,10))
+```
+
+
+```{r}
+Rovid19::plot_R(
+  my_country = "Germany"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = www_cases_daily
+)
+```
+
+```{r}
+Rovid19::plot_R(
+  my_country = "Italy"
+  , start_date = r0_date
+  , last_date = lubridate::today()
+  , mydata = www_cases_daily
+)
+```
+
+
+
+
