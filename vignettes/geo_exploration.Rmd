@@ -1,0 +1,142 @@
+---
+title: "Analysing COVID-19 (2019-nCoV) outbreak in France"
+draft: true
+description: "A further exploration of COVID-19 incidence data using R tools and packages."
+categories:
+  - R
+  - "COVID-19"
+author:
+  - name: Barthélémy Longueville for datapleth.io
+creative_commons: CC BY-SA
+twitter:
+  creator: "@datapleth"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 3
+    self_contained: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+  
+```{r loadLibs, include=FALSE}
+library(tidyverse)
+library(data.table)
+library(kableExtra)
+library(DT)
+library(RColorBrewer)
+library(ggplot2)
+library(gghighlight)
+library(plotly)
+library(patchwork)
+library(shadowtext)
+library(viridis)
+library(gt)
+library(deSolve)
+library(EpiEstim)
+library(incidence)
+library(distcrete)
+library(epitrix)
+library(projections)
+library(earlyR)
+library(distill)
+library(Rovid19)
+
+knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
+# Remove scientific notation
+options(scipen=999)
+```
+
+
+
+
+# Introduction & Objectives
+
+This documents provides an analysis of Covid-19 outbreak in France based on 
+offical data, and community data. We also include some comparison with other
+countries such as Italy.
+
+We will use different types and granularity of data such as :
+
+- number of covid-19 case at country level
+- official hospital daily data (back home, currently hospitalized, currently in ICU & deaths), at country, region, department levels
+- officiel emergency daily data (ER visits, ER visits for covid, hospitalization for covid-19, SOS médecins act, SOS médecins covid-19 acts) at country, regional and department levels.
+- official tests done at country, region and department levels.
+
+Another report of this project is focusing on mortality (see references).
+
+Visualisation and some elements of code are inspired by the best reference we
+found during this period :
+
+- John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
+- Tim Churches with scientist at South Western Sydney Clinical School, UNSW 
+Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, 
+Australia. ( [link](https://swscs.med.unsw.edu.au) and his 
+work [here](https://timchurches.github.io/blog/))
+
+This report is published under creative common CC BY-SA, and code should be
+GPL 3.0
+
+
+
+# Covid-19 Data per iris zone
+
+## Covid Data
+
+```{r}
+load(file = "./latest/latest_rovid.Rda")
+```
+
+
+## SI-DEP geospatial data
+
+Load Iris sub department geo file
+
+```{r loadIris}
+load(file = "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/geo/france/clean/iris_sp.Rda")
+```
+
+
+## Overview
+
+```{r}
+my_date <- max(france_official_sidep_sg_iris$date, na.rm = TRUE)
+france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == my_date, ]
+```
+
+The latest available data ends on `r my_date`.
+
+## Merge data
+
+```{r}
+iris_sp_latest <- merge(
+  x = iris_sp, 
+  y = france_official_sidep_sg_iris_latest,
+  by.x = "CODE_IRIS",
+  by.y = "iris2019",
+  all.x = TRUE)
+```
+
+# Let's map !
+
+## Choropleth for 92
+
+```{r}
+my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("59","69","43"),]
+g <- ggplot(data = my_data)
+g <- g + geom_sf(aes(fill = ti), lwd = 0.1) +
+    scale_fill_viridis_c(option = "plasma", limits = c(0, 1000))
+g 
+
+```
+
+
+

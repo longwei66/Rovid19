@@ -425,49 +425,6 @@ france_official_sidep_dep_agg_reg <- france_official_sidep_dep[ , .(cases = sum(
 ```
 
 
-### SI-DEP geospatial data
-
-Load Iris sub department geo file
-
-```{r loadIris}
-load(file = "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/geo/france/clean/iris_f.Rda")
-```
-
-Take a subset for 92 and merge with covid test data
-
-```{r}
-iris_simp_fortified <- broom::tidy(iris_f, region = "CODE_IRIS")
-
-my_data <- merge(
-  x = france_official_sidep_sg_iris[  iris2019 == "920770106" ]
-  , y = iris_simp_sp
-  , by.x = "iris2019"
-  , by.y = "CODE_IRIS"
-  , allow.cartesian=TRUE
-)
-
-
-
-# Now I can plot this shape easily as described before:
-ggplot( ) +
-  geom_polygon(data = my_data[ date == "2020-10-07"],
-               aes( x = long, y = lat, group = group),
-               fill="white",
-               color="grey", size = 0.2
-  ) +
-  coord_map("lambert", lat0=32, lat=142.0095) +
-  theme_tufte() +
-  theme(
-    axis.line=element_blank()
-    , axis.text=element_blank()
-    , axis.ticks=element_blank()
-    , axis.title=element_blank()
-  ) +
-  ggtitle("France Subdivisions - Insee Iris")
-```
-
-
-
 
 #### 
 
