@@ -109,7 +109,7 @@ load(file = "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/geo/france/cl
 
 ```{r}
 my_date <- max(france_official_sidep_sg_iris$date, na.rm = TRUE)
-france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == my_date, ]
+france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == "2020-10-06", ]
 ```
 
 The latest available data ends on `r my_date`.
@@ -130,7 +130,7 @@ iris_sp_latest <- merge(
 ## Choropleth for 92
 
 ```{r}
-my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("59","69","43"),]
+my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 g <- ggplot(data = my_data)
 g <- g + geom_sf(aes(fill = ti), lwd = 0.1) +
     scale_fill_viridis_c(option = "plasma", limits = c(0, 1000))
@@ -138,5 +138,64 @@ g
 
 ```
 
+## Spatial smoothing
+
+```{r}
+iris_sp_c <- st_centroid(iris_sp)
+pts <- do.call(rbind, st_geometry(iris_sp_c))
+pts <- as.data.table(pts)
+pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
+
+
+my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("19","07","26","87","23","63","15","38","42","43","69"),]
+final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
+final$X <- final$V1
+final$Y <- final$V2
+
+g <- ggplot(data = my_data)
+g <- g + geom_sf(aes(fill = ti), lwd = 0.1) +
+    scale_fill_viridis_c(option = "plasma", limits = c(0, 1000)) 
+g + stat_density_2d(data = final, aes(X, Y),adjust = 1/2)
+
+```
+
+## 3D
+
+
+```{r}
+iris_sp_c <- st_centroid(iris_sp)
+pts <- do.call(rbind, st_geometry(iris_sp_c))
+pts <- as.data.table(pts)
+pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
+
+
+my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("19"),]
+final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
+final$X <- final$V1
+final$Y <- final$V2
+
+library(linemap)
+library(sf)
+opar <- par(mar=c(0,0,0,0), bg = "ivory2")
+bb <- st_bbox(final$geometry)
+plot(st_geometry(final$geometry), col="ivory1", border = NA)
+linemap(
+  x = final, 
+  var = "pop", 
+  k = 2.5, 
+  threshold = 50,
+  col = "ivory1", 
+  border = "ivory4", 
+  lwd = 0.6, 
+  add = TRUE
+)
+text(x = bb[1], y = bb[4],adj = c(0,1),
+     labels = "Répartition de la\npopulation\nen Occitanie",  
+     col = "ivory4", font = 2,  cex = 1.8)
+# add sources
+mapsources <-"Timothée Giraud\nlinemap 0.1.0\nDonnées carroyées à 1 kilomètre, INSEE 2010"
+text(x = bb[3], y = bb[2],labels = mapsources,  
+     col = "ivory4", font = 3, adj = c(1,0), cex = 0.6 )
+```
 
 
