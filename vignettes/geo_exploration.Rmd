@@ -147,20 +147,44 @@ pts <- as.data.table(pts)
 pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
 
 
-my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("19","07","26","87","23","63","15","38","42","43","69"),]
+my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c(
+  "01","19","07","26","87","23","63","15","38","42","43",
+  "69"
+  ),]
 final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
 final$X <- final$V1
 final$Y <- final$V2
 
-g <- ggplot(data = my_data)
-g <- g + geom_sf(aes(fill = ti), lwd = 0.1) +
-    scale_fill_viridis_c(option = "plasma", limits = c(0, 1000)) 
-g + stat_density_2d(data = final, aes(X, Y),adjust = 1/2)
+g <- ggplot(
+  data = my_data
+  )
+g <- g + geom_sf(
+  aes(
+    fill = pop #ti
+    ),
+  lwd = 0.01
+  ) +
+    scale_fill_viridis_c(
+      option = "plasma"
+      #, limits = c(0, 1000)
+      ) 
+g #+ stat_density_2d(data = final, aes(X, Y))
 
 ```
 
+
+
+
 ## 3D
 
+```{r}
+library(rayshader)
+plot_gg(g,multicore=TRUE,width=5,height=5,scale=250,windowsize=c(1400,866),
+       zoom = 0.55, phi = 30)
+```
+
+
+## 3D lines
 
 ```{r}
 iris_sp_c <- st_centroid(iris_sp)
