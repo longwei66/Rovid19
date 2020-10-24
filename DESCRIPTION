@@ -1,6 +1,6 @@
 Package: Rovid19
 Title: A package to explore, visualise and model Covid-19 pandemic
-Version: 0.0.0.9000
+Version: 0.0.0.9001
 Authors@R: 
     person(given = "Barthelemy",
            family = "Longueville",

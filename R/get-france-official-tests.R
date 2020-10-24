@@ -20,9 +20,14 @@ getFranceOfficialTests <- function(
   , sidep_total_url = "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
   , regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-tres-simplifies-des-regions-2019@ofgl-opendatamef/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
   , region_departements_url = "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
+  , sidep_sg_iris_url = "https://www.data.gouv.fr/fr/datasets/r/44d4c265-24c3-4720-9144-f3e4a5213422"
+  , sidep_sg_epci_url = "https://www.data.gouv.fr/fr/datasets/r/34dcc90c-aec9-48ee-9fd3-a972b44202c0"
+  , sidep_sg_com_url = "https://www.data.gouv.fr/fr/datasets/r/c2e2e844-9671-4f81-8c81-1b79f7687de3"
 ){
 
-
+  # ===========================================================================
+  # Geographical information
+  # ===========================================================================
   france_region_departements <- data.table::as.data.table(
     read.csv(file = region_departements_url, sep = ",")
   )
@@ -133,6 +138,18 @@ getFranceOfficialTests <- function(
 
 
 
+  france_official_sidep_sg_iris <- data.table::as.data.table(
+    read.csv(file = sidep_sg_iris_url, sep = ","))
+
+  france_official_sidep_sg_iris %>%
+    mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
+    mutate(week = lubridate::isoweek(date)) -> france_official_sidep_sg_iris
+
+  #, sidep_sg_epci_url = "https://www.data.gouv.fr/fr/datasets/r/34dcc90c-aec9-48ee-9fd3-a972b44202c0"
+  #, sidep_sg_com_url = "https://www.data.gouv.fr/fr/datasets/r/c2e2e844-9671-4f81-8c81-1b79f7687de3"
+
+
+
   return(
     list(
       tests_dep_codebook = france_official_tests_dep_codebook
@@ -142,6 +159,9 @@ getFranceOfficialTests <- function(
       , sidep_dep = france_official_sidep_dep
       , sidep_reg = france_official_sidep_reg
       , sidep_total = france_official_sidep_total
+      , sidep_sg_iris = france_official_sidep_sg_iris
+      #, sidep_sg_epci = france_official_sidep_sg_epci
+      #, sidep_sg_com = france_official_sidep_sg_com
     )
   )
 }
