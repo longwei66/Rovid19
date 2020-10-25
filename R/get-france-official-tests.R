@@ -141,9 +141,17 @@ getFranceOfficialTests <- function(
   france_official_sidep_sg_iris <- data.table::as.data.table(
     read.csv(file = sidep_sg_iris_url, sep = ","))
 
-  france_official_sidep_sg_iris %>%
+  france_official_sidep_sg_iris <- france_official_sidep_sg_iris %>%
     mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
-    mutate(week = lubridate::isoweek(date)) -> france_official_sidep_sg_iris
+    mutate(week = lubridate::isoweek(date)) %>%
+    mutate( ti_class_low = as.numeric(gsub(pattern = "^\\[([0-9]*);.*", replacement = "\\1", x = ti_classe))) %>%
+    mutate( ti_class_high = gsub(pattern = "^\\[[0-9]*;(.*)(\\[|\\])$", replacement = "\\1", x = ti_classe)) %>%
+    mutate(ti_class_high = replace(ti_class_high, ti_class_high=="Max", "1000")) %>%
+    mutate(ti_class_high = as.numeric(ti_class_high)) %>%
+    mutate(ti_class_low = as.numeric(ti_class_low)) %>%
+    mutate( ti_class_mean = (ti_class_high + ti_class_low) / 2)
+
+
 
   #, sidep_sg_epci_url = "https://www.data.gouv.fr/fr/datasets/r/34dcc90c-aec9-48ee-9fd3-a972b44202c0"
   #, sidep_sg_com_url = "https://www.data.gouv.fr/fr/datasets/r/c2e2e844-9671-4f81-8c81-1b79f7687de3"
