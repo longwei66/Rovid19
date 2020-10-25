@@ -130,10 +130,11 @@ iris_sp_latest <- merge(
 ## Choropleth for 92
 
 ```{r}
-my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
+my_data <- iris_sp_latest[ iris_sp_latest$REG %in% c(84) | TRUE,]
 g <- ggplot(data = my_data)
-g <- g + geom_sf(aes(fill = ti), lwd = 0.1) +
+g <- g + geom_sf(aes(fill = ti_class_mean), lwd = 0.1) +
     scale_fill_viridis_c(option = "plasma", limits = c(0, 1000))
+g <- g + facet_grid(facets = . ~ clage_65)
 g 
 
 ```

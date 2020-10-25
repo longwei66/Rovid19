@@ -20,7 +20,7 @@ output:
     self_contained: true
     number_sections: true
 vignette: >
-%\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+  %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
