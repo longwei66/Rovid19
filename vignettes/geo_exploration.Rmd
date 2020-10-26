@@ -26,7 +26,7 @@ vignette: >
 ---
 
 
-  
+
 ```{r loadLibs, include=FALSE}
 library(tidyverse)
 library(data.table)
@@ -167,11 +167,11 @@ g <- g + geom_sf(
   aes(
     #fill = cases
     fill = ti_class_mean
-    ), lwd = 0.01) +
-    scale_fill_viridis_c(
-      option = "plasma"
-      #, limits = c(0, 1000)
-      )
+  ), lwd = 0.01) +
+  scale_fill_viridis_c(
+    option = "plasma"
+    #, limits = c(0, 1000)
+  )
 #g <- g + facet_grid(facets = . ~ clage_65)
 g + theme_minimal()
 
@@ -182,35 +182,128 @@ g + theme_minimal()
 
 ```{r}
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
-my_data <- iris_sp_latest[ iris_sp_latest$REG %in% c(11) & iris_sp_latest$clage_65 == 0,]
+my_data <- iris_sp_latest[ 
+  iris_sp_latest$REG %in% c(84, 32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 11) & iris_sp_latest$clage_65 == 0,
+]
 #plot(st_geometry(my_data))
 
 
 bret <- getgrid(
   x = my_data
-  , cellsize = 1000
+  , cellsize = 3000
   #, var = "ti_class_mean"
   , var = "cases"
-  )
+)
 bret[6010:6014,]
 
 
-
+jpeg(filename = "la_france_covid.jpg", width = 3000, height = 3000, units = "px")
 opar <- par(mar = c(0,0,0,0))
-plot(st_geometry(my_data), col="lightblue3", border = NA, bg = "lightblue2",
-     xlim = c(min(bret$X), max(bret$X)), ylim= c(min(bret$Y), max(bret$Y)))
+plot(
+  st_geometry(my_data)
+  , col="lightblue3"
+  , border = NA
+  , bg = "lightblue2"
+  , xlim = c(min(bret$X), max(bret$X))
+  , ylim= c(min(bret$Y), max(bret$Y))
+)
 linemap(
   x = bret
   #, var = "ti_class_mean"
   , var = "cases"
   #, k = 2
-  , k = 50
-  , threshold = 0
+  , k = 100
+  , threshold = 4
   , col = "lightblue3", border = "white"
-  , lwd = 0.8, add = TRUE
-  )
+  , lwd = 1, add = TRUE
+)
 par(opar)
+dev.off()
 ```
+
+## Linemap annimation
+
+```{r}
+plot_france_line <- function(
+  my_data = null # source data
+  , plot_date = null
+){
+  
+  message("===== get grid ======")
+  bret <- getgrid(
+    x = my_data
+    , cellsize = 3000
+    #, var = "ti_class_mean"
+    , var = "cases"
+  )
+  
+  message("===== plot map ======")
+  jpeg(filename = paste0(plot_date,"_la_france_covid.jpg"), width = 3000, height = 3000, units = "px")
+  opar <- par(mar = c(0,0,0,0))
+  plot(
+    st_geometry(my_data)
+    , col="lightblue3"
+    , border = NA
+    , bg = "lightblue2"
+    , xlim = c(min(bret$X), max(bret$X))
+    , ylim= c(min(bret$Y), max(bret$Y))
+  )
+  linemap(
+    x = bret
+    #, var = "ti_class_mean"
+    , var = "cases"
+    #, k = 2
+    , k = 100
+    , threshold = 4
+    , col = "lightblue3", border = "white"
+    , lwd = 1, add = TRUE
+  )
+  par(opar)
+  dev.off()
+}
+```
+
+
+
+
+```{r}
+date_list <- unique(france_official_sidep_sg_iris$date)
+
+for(i in 1:lenght(date_list)){
+  
+  message(date_list[i])
+  france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == date_list[i], ]  
+  
+  iris_sp_latest <- merge(
+    x = iris_sp, 
+    y = france_official_sidep_sg_iris_latest,
+    by.x = "CODE_IRIS",
+    by.y = "iris2019",
+    all.x = TRUE)
+  iris_sp_latest <- merge(
+    x = iris_sp_latest, 
+    y = pop,
+    by.x = "CODE_IRIS",
+    by.y = "IRIS",
+    all.x = TRUE)
+  
+  iris_sp_latest$cases <- 0
+  iris_sp_latest[iris_sp_latest$clage_65 == 0,]$cases <- iris_sp_latest[iris_sp_latest$clage_65 == 0,]$P16_POP * iris_sp_latest[iris_sp_latest$clage_65 == 0,]$ti_class_mean / 100000
+  iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_latest$clage_65 == 65,]$P16_POP *  iris_sp_latest[iris_sp_latest$clage_65 == 65,]$ti_class_mean / 100000
+  
+  my_data <- iris_sp_latest[ 
+    iris_sp_latest$REG %in% c(84, 32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 11) & iris_sp_latest$clage_65 == 0,
+  ]
+  
+  plot_france_line(
+    my_data = my_data
+    , plot_date = date_list[i]
+  )
+}
+
+
+```
+
 
 
 
@@ -230,27 +323,28 @@ pts$DEP <- iris_sp_c$DEP
 
 
 ```{r}
+
 my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c(
   "01","19","07","26","87","23","63","15","38","42","43",
   "69"
-  ),]
+),]
 final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
 final$X <- final$V1
 final$Y <- final$V2
 
 g <- ggplot(
   data = my_data
-  )
+)
 g <- g + geom_sf(
   aes(
     fill = pop #ti
-    ),
+  ),
   lwd = 0.01
-  ) +
-    scale_fill_viridis_c(
-      option = "plasma"
-      #, limits = c(0, 1000)
-      ) 
+) +
+  scale_fill_viridis_c(
+    option = "plasma"
+    #, limits = c(0, 1000)
+  ) 
 g #+ stat_density_2d(data = final, aes(X, Y))
 
 ```
@@ -263,7 +357,7 @@ g #+ stat_density_2d(data = final, aes(X, Y))
 ```{r}
 library(rayshader)
 plot_gg(g,multicore=TRUE,width=5,height=5,scale=250,windowsize=c(1400,866),
-       zoom = 0.55, phi = 30)
+        zoom = 0.55, phi = 30)
 ```
 
 
@@ -274,6 +368,10 @@ iris_sp_c <- st_centroid(iris_sp)
 pts <- do.call(rbind, st_geometry(iris_sp_c))
 pts <- as.data.table(pts)
 pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
+
+
+unique(france_official_sidep_sg_iris$date)
+
 
 
 my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("19"),]
