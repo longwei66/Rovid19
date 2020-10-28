@@ -160,7 +160,11 @@ iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_l
 
 
 ```{r}
-my_data <- iris_sp_latest[ iris_sp_latest$REG %in% c(11) & iris_sp_latest$clage_65 == 0,]
+my_data <- iris_sp_latest[ 
+  iris_sp_latest$REG %in% c(11) 
+  #& iris_sp_latest$DEP %in% c("92", "78")
+  & iris_sp_latest$clage_65 == 0,
+  ]
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 g <- ggplot(data = my_data)
 g <- g + geom_sf(
@@ -269,7 +273,7 @@ plot_france_line <- function(
 ```{r}
 date_list <- unique(france_official_sidep_sg_iris$date)
 
-for(i in 1:lenght(date_list)){
+for(i in 1:length(date_list)){
   
   message(date_list[i])
   france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == date_list[i], ]  
@@ -304,9 +308,16 @@ for(i in 1:lenght(date_list)){
 
 ```
 
+make the video :
 
+ffmpeg -framerate 1 -i %02d.jpg -c:v libx264 france_covid.mp4
 
+loop and reverse the video 
+70 = 22s of video lenght x 2 x 5 times
+ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:220,setpts=N/1/TB" output.mp4
 
+accelerate
+ffmpeg -i output.mp4 -filter:v fps=fps=12 output_final.mp4
 
 ## Spatial smoothing
 
