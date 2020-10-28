@@ -20,14 +20,14 @@ output:
     self_contained: true
     number_sections: true
 vignette: >
-  %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+%\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
----
-
-
-
-```{r loadLibs, include=FALSE}
+  ---
+  
+  
+  
+  ```{r loadLibs, include=FALSE}
 library(tidyverse)
 library(data.table)
 library(kableExtra)
@@ -156,7 +156,7 @@ iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_l
 
 # Let's map !
 
-## Choropleth for 92
+## Choropleth for Ile de France
 
 
 ```{r}
@@ -164,7 +164,7 @@ my_data <- iris_sp_latest[
   iris_sp_latest$REG %in% c(11) 
   #& iris_sp_latest$DEP %in% c("92", "78")
   & iris_sp_latest$clage_65 == 0,
-  ]
+]
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 g <- ggplot(data = my_data)
 g <- g + geom_sf(
@@ -184,6 +184,8 @@ g + theme_minimal()
 
 ## Linemap
 
+Prepare the grid for linemapping 
+
 ```{r}
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 my_data <- iris_sp_latest[ 
@@ -198,28 +200,62 @@ bret <- getgrid(
   #, var = "ti_class_mean"
   , var = "cases"
 )
-bret[6010:6014,]
+```
 
+Plot and save
 
+```{r}
 jpeg(filename = "la_france_covid.jpg", width = 3000, height = 3000, units = "px")
 opar <- par(mar = c(0,0,0,0))
 plot(
   st_geometry(my_data)
-  , col="lightblue3"
+  #, col = "lightblue3"
+  , col = "white"
   , border = NA
-  , bg = "lightblue2"
+  , bg = "lightblue" #"lightblue2"
   , xlim = c(min(bret$X), max(bret$X))
   , ylim= c(min(bret$Y), max(bret$Y))
+)
+bb <- st_bbox(my_data)
+text(
+  x = bb[1]
+  , y = bb[4]
+  , adj = c(0,1)
+  , labels = "2020-10-23"
+  , col = "white"
+  , font = 1
+  , cex = 7
+)
+text(
+  x = bb[1]
+  , y = bb[4] - (( bb[4] - bb[2] )/ 15)
+  , adj = c(0,1)
+  , labels = "Estimated number of new covid cases per iris code areas\non the last 7 days, based on incidence and population"
+  , col = "white"
+  , font = 1
+  , cex = 3
+)
+text(
+  x = bb[1]
+  , y = bb[4] - 9 * (( bb[4] - bb[2] )/ 10)
+  , adj = c(0,1)
+  , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr & Santé Publique France"
+  , col = "white"
+  , font = 1
+  , cex = 3
 )
 linemap(
   x = bret
   #, var = "ti_class_mean"
   , var = "cases"
   #, k = 2
-  , k = 100
-  , threshold = 4
-  , col = "lightblue3", border = "white"
-  , lwd = 1, add = TRUE
+  , k = 150
+  , threshold = 1
+  #, col = "lightblue3"
+  , col = "lightgrey"
+  #, border = "white"
+  , border = "black"
+  , lwd = 2, add = TRUE
 )
 par(opar)
 dev.off()
@@ -231,6 +267,7 @@ dev.off()
 plot_france_line <- function(
   my_data = null # source data
   , plot_date = null
+  , file_name = null
 ){
   
   message("===== get grid ======")
@@ -242,25 +279,54 @@ plot_france_line <- function(
   )
   
   message("===== plot map ======")
-  jpeg(filename = paste0(plot_date,"_la_france_covid.jpg"), width = 3000, height = 3000, units = "px")
+  jpeg(filename = file_name, width = 3000, height = 3000, units = "px")
   opar <- par(mar = c(0,0,0,0))
   plot(
     st_geometry(my_data)
-    , col="lightblue3"
+    , col = "white"
     , border = NA
-    , bg = "lightblue2"
+    , bg =  "lightblue"
     , xlim = c(min(bret$X), max(bret$X))
     , ylim= c(min(bret$Y), max(bret$Y))
+  )
+  bb <- st_bbox(my_data)
+  text(
+    x = bb[1]
+    , y = bb[4]
+    , adj = c(0,1)
+    , labels = as.character(plot_date)
+    , col = "white"
+    , font = 1
+    , cex = 7
+  )
+  text(
+    x = bb[1]
+    , y = bb[4] - (( bb[4] - bb[2] )/ 15)
+    , adj = c(0,1)
+    , labels = "Estimated number of new covid cases per iris code areas\non the last 7 days, based on incidence and population"
+    , col = "white"
+    , font = 1
+    , cex = 3
+  )
+  text(
+    x = bb[1]
+    , y = bb[4] - 9 * (( bb[4] - bb[2] )/ 10)
+    , adj = c(0,1)
+    , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr & Santé Publique France"
+    , col = "white"
+    , font = 1
+    , cex = 3
   )
   linemap(
     x = bret
     #, var = "ti_class_mean"
     , var = "cases"
     #, k = 2
-    , k = 100
-    , threshold = 4
-    , col = "lightblue3", border = "white"
-    , lwd = 1, add = TRUE
+    , k = 150
+    , threshold = 1
+    , col = "lightgrey"
+    , border = "black"
+    , lwd = 2, add = TRUE
   )
   par(opar)
   dev.off()
@@ -302,6 +368,7 @@ for(i in 1:length(date_list)){
   plot_france_line(
     my_data = my_data
     , plot_date = date_list[i]
+    , file_name = paste0((10000+i),".jpg")
   )
 }
 
@@ -318,6 +385,8 @@ ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:22
 
 accelerate
 ffmpeg -i output.mp4 -filter:v fps=fps=12 output_final.mp4
+
+http://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
 
 ## Spatial smoothing
 
