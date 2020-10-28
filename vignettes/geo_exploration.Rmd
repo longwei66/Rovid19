@@ -20,14 +20,14 @@ output:
     self_contained: true
     number_sections: true
 vignette: >
-%\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
-  ---
+  %\VignetteIndexEntry{Analysing COVID-19 (2019-nCoV) outbreak in France}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\VignetteEncoding{UTF-8}
+---
   
   
   
-  ```{r loadLibs, include=FALSE}
+```{r loadLibs, include=FALSE}
 library(tidyverse)
 library(data.table)
 library(kableExtra)
@@ -161,8 +161,8 @@ iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_l
 
 ```{r}
 my_data <- iris_sp_latest[ 
-  iris_sp_latest$REG %in% c(11) 
-  #& iris_sp_latest$DEP %in% c("92", "78")
+  #iris_sp_latest$REG %in% c(11)  #& 
+  iris_sp_latest$DEP %in% c("92")
   & iris_sp_latest$clage_65 == 0,
 ]
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
@@ -221,7 +221,7 @@ text(
   x = bb[1]
   , y = bb[4]
   , adj = c(0,1)
-  , labels = "2020-10-23"
+  , labels = as.character(my_date)
   , col = "white"
   , font = 1
   , cex = 7
@@ -375,112 +375,23 @@ for(i in 1:length(date_list)){
 
 ```
 
-make the video :
+make the video at 1 frame per seconde
 
 ffmpeg -framerate 1 -i %02d.jpg -c:v libx264 france_covid.mp4
 
 loop and reverse the video 
-70 = 22s of video lenght x 2 x 5 times
-ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:220,setpts=N/1/TB" output.mp4
+230 = 23s of video lenght x 2 x 5 times
+ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:230,setpts=N/1/TB" output.mp4
 
 accelerate
-ffmpeg -i output.mp4 -filter:v fps=fps=12 output_final.mp4
+ffmpeg -i output.mp4 -r 8 -filter:v "setpts=0.125*PTS" output_final.mp4 
 
 http://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
 
-## Spatial smoothing
-
-Compute centroids
-
-```{r}
-iris_sp_c <- st_centroid(iris_sp)
-pts <- do.call(rbind, st_geometry(iris_sp_c))
-pts <- as.data.table(pts)
-pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
-pts$DEP <- iris_sp_c$DEP
-```
-
-
-
-```{r}
-
-my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c(
-  "01","19","07","26","87","23","63","15","38","42","43",
-  "69"
-),]
-final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
-final$X <- final$V1
-final$Y <- final$V2
-
-g <- ggplot(
-  data = my_data
-)
-g <- g + geom_sf(
-  aes(
-    fill = pop #ti
-  ),
-  lwd = 0.01
-) +
-  scale_fill_viridis_c(
-    option = "plasma"
-    #, limits = c(0, 1000)
-  ) 
-g #+ stat_density_2d(data = final, aes(X, Y))
-
-```
-
-
-
-
-## 3D
 
 ```{r}
 library(rayshader)
 plot_gg(g,multicore=TRUE,width=5,height=5,scale=250,windowsize=c(1400,866),
         zoom = 0.55, phi = 30)
 ```
-
-
-## 3D lines
-
-```{r}
-iris_sp_c <- st_centroid(iris_sp)
-pts <- do.call(rbind, st_geometry(iris_sp_c))
-pts <- as.data.table(pts)
-pts$CODE_IRIS <- iris_sp_c$CODE_IRIS
-
-
-unique(france_official_sidep_sg_iris$date)
-
-
-
-my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("19"),]
-final <- merge(x = pts, y = my_data, by.x = "CODE_IRIS", by.y = "CODE_IRIS", all.x = FALSE)
-final$X <- final$V1
-final$Y <- final$V2
-
-library(linemap)
-library(sf)
-opar <- par(mar=c(0,0,0,0), bg = "ivory2")
-bb <- st_bbox(final$geometry)
-plot(st_geometry(final$geometry), col="ivory1", border = NA)
-linemap(
-  x = final, 
-  var = "pop", 
-  k = 2.5, 
-  threshold = 50,
-  col = "ivory1", 
-  border = "ivory4", 
-  lwd = 0.6, 
-  add = TRUE
-)
-text(x = bb[1], y = bb[4],adj = c(0,1),
-     labels = "Répartition de la\npopulation\nen Occitanie",  
-     col = "ivory4", font = 2,  cex = 1.8)
-# add sources
-mapsources <-"Timothée Giraud\nlinemap 0.1.0\nDonnées carroyées à 1 kilomètre, INSEE 2010"
-text(x = bb[3], y = bb[2],labels = mapsources,  
-     col = "ivory4", font = 3, adj = c(1,0), cex = 0.6 )
-```
-
 

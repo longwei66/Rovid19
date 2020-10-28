@@ -28,10 +28,10 @@ getFranceOfficialTests <- function(
   # ===========================================================================
   # Geographical information
   # ===========================================================================
+  message("------ get regions and department metadata")
   france_region_departements <- data.table::as.data.table(
     read.csv(file = region_departements_url, sep = ",")
   )
-
   regions <- as.data.table(read.csv(
     file= regions_url
     , sep = ";"))
@@ -39,12 +39,13 @@ getFranceOfficialTests <- function(
     mutate( code_insee = Code.INSEE, region_name = Nom.région) %>%
     select(code_insee, region_name)
 
+  message("------ get pre-sidep tests per department codebook")
   france_official_tests_dep_codebook <- data.table::as.data.table(
     read.csv(file = tests_dep_codebook_url
              , sep = ";", header = T, stringsAsFactors = F)
     )
 
-
+  message("------ get pre-sidep tests per department")
   france_official_tests_dep <- data.table::as.data.table(
     read.csv(file = tests_dep_url, sep = ";")
     )
@@ -56,14 +57,12 @@ getFranceOfficialTests <- function(
     mutate(
       date = as.Date(date)
     )-> france_official_tests_dep
-
   france_official_tests_dep <- data.table::as.data.table(merge(
     france_official_tests_dep
     , france_region_departements
     , by.x = "department"
     , by.y = "num_dep"
   ))
-
   france_official_tests_dep %>%
     group_by(region_name,date,clage_covid) %>%
     summarise(
@@ -76,7 +75,6 @@ getFranceOfficialTests <- function(
     ) %>%
     ungroup() %>%
     data.table::as.data.table()-> france_official_tests_reg
-
   france_official_tests_dep %>%
     group_by(date,clage_covid) %>%
     summarise(
@@ -90,16 +88,14 @@ getFranceOfficialTests <- function(
     ungroup() %>%
     data.table::as.data.table()-> france_official_tests_total
 
-
+  message("------ get sidep tests per department codebook")
   france_official_sidep_dep <- data.table::as.data.table(
     read.csv(file = sidep_dep_url, sep = ";"))
-
   france_official_sidep_dep %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
     select(-jour) %>%
     as.data.table()-> france_official_sidep_dep
-
   france_official_sidep_dep <- data.table::as.data.table(merge(
     france_official_sidep_dep
     , france_region_departements
@@ -107,10 +103,9 @@ getFranceOfficialTests <- function(
     , by.y = "num_dep"
   ))
 
-
+  message("------ get sidep tests per regions")
   france_official_sidep_reg <- data.table::as.data.table(
     read.csv(file = sidep_reg_url, sep = ";"))
-
   france_official_sidep_reg %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
@@ -118,7 +113,6 @@ getFranceOfficialTests <- function(
     filter( reg != "ZZ" ) %>% # ZZ is empty data
     mutate( reg = as.numeric(reg)) %>%
     as.data.table()-> france_official_sidep_reg
-
   france_official_sidep_reg <- data.table::as.data.table(merge(
     france_official_sidep_reg
     , regions
@@ -126,10 +120,9 @@ getFranceOfficialTests <- function(
     , by.y = "code_insee"
   ))
 
-
+  message("------ get sidep tests per country")
   france_official_sidep_total <- data.table::as.data.table(
     read.csv(file = sidep_total_url, sep = ";"))
-
   france_official_sidep_total %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
@@ -137,10 +130,9 @@ getFranceOfficialTests <- function(
     as.data.table()-> france_official_sidep_total
 
 
-
+  message("------ get sidep incidence per iris code area")
   france_official_sidep_sg_iris <- data.table::as.data.table(
     read.csv(file = sidep_sg_iris_url, sep = ","))
-
   france_official_sidep_sg_iris <- france_official_sidep_sg_iris %>%
     mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
     mutate(week = lubridate::isoweek(date)) %>%
@@ -151,12 +143,8 @@ getFranceOfficialTests <- function(
     mutate(ti_class_low = as.numeric(ti_class_low)) %>%
     mutate( ti_class_mean = (ti_class_high + ti_class_low) / 2)
 
-
-
   #, sidep_sg_epci_url = "https://www.data.gouv.fr/fr/datasets/r/34dcc90c-aec9-48ee-9fd3-a972b44202c0"
   #, sidep_sg_com_url = "https://www.data.gouv.fr/fr/datasets/r/c2e2e844-9671-4f81-8c81-1b79f7687de3"
-
-
 
   return(
     list(
