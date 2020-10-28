@@ -198,14 +198,14 @@ bret <- getgrid(
   x = my_data
   , cellsize = 3000
   #, var = "ti_class_mean"
-  , var = "cases"
+  , var = "P16_POP" #"cases"
 )
 ```
 
 Plot and save
 
 ```{r}
-jpeg(filename = "la_france_covid.jpg", width = 3000, height = 3000, units = "px")
+jpeg(filename = "la_france.jpg", width = 3000, height = 3000, units = "px")
 opar <- par(mar = c(0,0,0,0))
 plot(
   st_geometry(my_data)
@@ -230,7 +230,7 @@ text(
   x = bb[1]
   , y = bb[4] - (( bb[4] - bb[2] )/ 15)
   , adj = c(0,1)
-  , labels = "Estimated number of new covid cases per iris code areas\non the last 7 days, based on incidence and population"
+  , labels = "French population per iris code areas"
   , col = "white"
   , font = 1
   , cex = 3
@@ -239,7 +239,7 @@ text(
   x = bb[1]
   , y = bb[4] - 9 * (( bb[4] - bb[2] )/ 10)
   , adj = c(0,1)
-  , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr & Santé Publique France"
+  , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr"
   , col = "white"
   , font = 1
   , cex = 3
@@ -247,9 +247,9 @@ text(
 linemap(
   x = bret
   #, var = "ti_class_mean"
-  , var = "cases"
+  , var = "P16_POP" #"cases"
   #, k = 2
-  , k = 150
+  , k = 1 #150
   , threshold = 1
   #, col = "lightblue3"
   , col = "lightgrey"
