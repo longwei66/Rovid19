@@ -120,6 +120,7 @@ pop <- pop[,.(IRIS,P16_POP,P16_POP65P)]
 
 ```{r}
 my_date <- max(france_official_sidep_sg_iris$date, na.rm = TRUE)
+my_date_min <- min(france_official_sidep_sg_iris$date, na.rm = TRUE)
 my_date
 france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == my_date, ]
 ```
@@ -377,7 +378,7 @@ for(i in 1:length(date_list)){
 
 make the video at 1 frame per seconde
 
-ffmpeg -framerate 1 -i %02d.jpg -c:v libx264 france_covid.mp4
+ffmpeg -framerate 1 -i 100%02d.jpg -c:v libx264 france_covid.mp4
 
 loop and reverse the video 
 230 = 23s of video lenght x 2 x 5 times
