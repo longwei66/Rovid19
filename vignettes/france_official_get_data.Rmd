@@ -352,7 +352,9 @@ Dataset per departments :
 
 ```{r loadCleanFranceOfficialTestsdepCodebook, echo=FALSE}
 # Get France hospitalization data
-france_tests <- getFranceOfficialTests()
+france_tests <- getFranceOfficialTests(
+  # sidep_sg_iris_url = "https://www.data.gouv.fr/fr/datasets/r/969bfa30-e14c-4a8f-be47-75a8fce6a197" to get historical data
+  )
 
 france_official_tests_dep_codebook <- france_tests$tests_dep_codebook
 

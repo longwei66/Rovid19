@@ -24,114 +24,115 @@ vignette: >
     %\VignetteEngine{knitr::rmarkdown}
     %\VignetteEncoding{UTF-8}
 ---
-  
-  
-  
+    
+    
+    
 ```{r loadLibs, include=FALSE}
-library(tidyverse)
-library(data.table)
-library(kableExtra)
-library(DT)
-library(RColorBrewer)
-library(ggplot2)
-library(gghighlight)
-library(plotly)
-library(patchwork)
-library(shadowtext)
-library(viridis)
-library(gt)
-library(deSolve)
-library(EpiEstim)
-library(incidence)
-library(distcrete)
-library(epitrix)
-library(projections)
-library(earlyR)
-library(distill)
-library(Rovid19)
-library(ggplot2)
-library(linemap)
-library(sf)
-
-knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
-# Remove scientific notation
-options(scipen=999)
+    library(tidyverse)
+    library(data.table)
+    library(kableExtra)
+    library(DT)
+    library(RColorBrewer)
+    library(ggplot2)
+    library(gghighlight)
+    library(plotly)
+    library(patchwork)
+    library(shadowtext)
+    library(viridis)
+    library(gt)
+    library(deSolve)
+    library(EpiEstim)
+    library(incidence)
+    library(distcrete)
+    library(epitrix)
+    library(projections)
+    library(earlyR)
+    library(distill)
+    library(Rovid19)
+    library(ggplot2)
+    library(linemap)
+    library(sf)
+    
+    knitr::opts_chunk$set(fig.width=9, fig.height=9, echo=FALSE, warning = FALSE, message = FALSE)
+    # Remove scientific notation
+    options(scipen=999)
 ```
-
-
-
-
+    
+    
+    
+    
 # Introduction & Objectives
-
+    
 This documents provides an analysis of Covid-19 outbreak in France based on 
 offical data, and community data. We also include some comparison with other
 countries such as Italy.
-
+    
 We will use different types and granularity of data such as :
-
+    
 - number of covid-19 case at country level
 - official hospital daily data (back home, currently hospitalized, currently in ICU & deaths), at country, region, department levels
 - officiel emergency daily data (ER visits, ER visits for covid, hospitalization for covid-19, SOS médecins act, SOS médecins covid-19 acts) at country, regional and department levels.
 - official tests done at country, region and department levels.
-
+    
 Another report of this project is focusing on mortality (see references).
-
+    
 Visualisation and some elements of code are inspired by the best reference we
 found during this period :
-
+    
 - John Burn-Murdoch ( @jburnmurdoch ) who is a senior dataviz journalist at ft.com (see [his work here](https://www.ft.com/coronavirus-latest))
 - Tim Churches with scientist at South Western Sydney Clinical School, UNSW 
 Medicine & Ingham Institute of Applied Medical Research, Liverpool, Sydney, 
 Australia. ( [link](https://swscs.med.unsw.edu.au) and his 
 work [here](https://timchurches.github.io/blog/))
-
+    
 This report is published under creative common CC BY-SA, and code should be
 GPL 3.0
-
-
-
+    
+    
+    
 # Covid-19 Data per iris zone
-
+    
 ## Covid Data
-
+    
 ```{r}
 load(file = "./latest/latest_rovid.Rda")
 ```
-
-
+    
+    
 ## SI-DEP geospatial data
-
+    
 Load Iris sub department geo file
-
+    
 ```{r loadIris}
 load(file = "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/geo/france/clean/iris_sp.Rda")
 ```
-
+    
 ## Load population
-
+    
 ```{r loadIris}
 pop <- data.table::fread(file =  "/media/lagrange/homes/lagrange_barthelemy/_DATA_STORE/geo/france/iris/base-ic-evol-struct-pop-2016.csv")
 pop <- pop[,.(IRIS,P16_POP,P16_POP65P)]
 ```
-
-
-
+    
+    
+    
 ## Overview
-
+    
 ```{r}
 my_date <- max(france_official_sidep_sg_iris$date, na.rm = TRUE)
 my_date_min <- min(france_official_sidep_sg_iris$date, na.rm = TRUE)
 my_date
+my_date_min
 france_official_sidep_sg_iris_latest <- france_official_sidep_sg_iris[ date == my_date, ]
 ```
-
+  
 The latest available data ends on `r my_date`.
-
+    
 ## Merge data
-
+    
 ```{r}
 iris_sp_latest <- merge(
-  x = iris_sp, 
+  x = iris_sp,
   y = france_official_sidep_sg_iris_latest,
   by.x = "CODE_IRIS",
   by.y = "iris2019",
@@ -143,23 +144,22 @@ iris_sp_latest <- merge(
   by.y = "IRIS",
   all.x = TRUE)
 ```
-
+    
 ## Compute estimated number of cases
-
+    
 ```{r}
 iris_sp_latest$cases <- 0
 iris_sp_latest[iris_sp_latest$clage_65 == 0,]$cases <- iris_sp_latest[iris_sp_latest$clage_65 == 0,]$P16_POP *  iris_sp_latest[iris_sp_latest$clage_65 == 0,]$ti_class_mean / 100000
 iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_latest$clage_65 == 65,]$P16_POP *  iris_sp_latest[iris_sp_latest$clage_65 == 65,]$ti_class_mean / 100000
-
 ```
-
-
-
+    
+    
+    
 # Let's map !
-
+    
 ## Choropleth for Ile de France
-
-
+    
+    
 ```{r}
 my_data <- iris_sp_latest[ 
   #iris_sp_latest$REG %in% c(11)  #& 
@@ -179,22 +179,22 @@ g <- g + geom_sf(
   )
 #g <- g + facet_grid(facets = . ~ clage_65)
 g + theme_minimal()
-
+    
 ```
-
-
+    
+    
 ## Linemap
-
+    
 Prepare the grid for linemapping 
-
+    
 ```{r}
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 my_data <- iris_sp_latest[ 
   iris_sp_latest$REG %in% c(84, 32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 11) & iris_sp_latest$clage_65 == 0,
 ]
 #plot(st_geometry(my_data))
-
-
+    
+    
 bret <- getgrid(
   x = my_data
   , cellsize = 3000
@@ -202,9 +202,9 @@ bret <- getgrid(
   #, var = "P16_POP" #"cases"
 )
 ```
-
+    
 Plot and save
-
+    
 ```{r}
 jpeg(filename = "la_france_covid.jpg", width = 3000, height = 3000, units = "px")
 opar <- par(mar = c(0,0,0,0))
@@ -223,27 +223,27 @@ text(
   , y = bb[4]
   , adj = c(0,1)
   , labels = as.character(my_date)
-  , col = "white"
+  , col = "black"
   , font = 1
   , cex = 7
 )
 text(
   x = bb[1]
-  , y = bb[4] - (( bb[4] - bb[2] )/ 15)
+  , y = bb[4] - (( bb[4] - bb[2] )/ 20)
   , adj = c(0,1)
   , labels = "Estimated number of new covid cases per iris code areas\non the last 7 days, based on incidence and population"
-  , col = "white"
+  , col = "black"
   , font = 1
-  , cex = 3
+  , cex = 3.5
 )
 text(
   x = bb[1]
-  , y = bb[4] - 9 * (( bb[4] - bb[2] )/ 10)
+  , y = bb[4] - 7 * (( bb[4] - bb[2] )/ 8)
   , adj = c(0,1)
-  , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr"
-  , col = "white"
+  , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr & Santé Publique France"
+  , col = "black"
   , font = 1
-  , cex = 3
+  , cex = 3.5
 )
 linemap(
   x = bret
@@ -261,8 +261,10 @@ linemap(
 par(opar)
 dev.off()
 ```
-
+    
 ## Linemap annimation
+
+### Function to generate the frames
 
 ```{r}
 plot_france_line <- function(
@@ -296,27 +298,27 @@ plot_france_line <- function(
     , y = bb[4]
     , adj = c(0,1)
     , labels = as.character(plot_date)
-    , col = "white"
+    , col = "black"
     , font = 1
     , cex = 7
   )
   text(
     x = bb[1]
-    , y = bb[4] - (( bb[4] - bb[2] )/ 15)
+    , y = bb[4] - (( bb[4] - bb[2] )/ 20)
     , adj = c(0,1)
     , labels = "Estimated number of new covid cases per iris code areas\non the last 7 days, based on incidence and population"
-    , col = "white"
+    , col = "black"
     , font = 1
-    , cex = 3
+    , cex = 3.5
   )
   text(
     x = bb[1]
-    , y = bb[4] - 9 * (( bb[4] - bb[2] )/ 10)
+    , y = bb[4] - 7 * (( bb[4] - bb[2] )/ 8)
     , adj = c(0,1)
     , labels = "License : (CC BY-SA 4.0) tolmay.io / Barthelemy Longueville \nData source from insee.fr & Santé Publique France"
-    , col = "white"
+    , col = "black"
     , font = 1
-    , cex = 3
+    , cex = 3.5
   )
   linemap(
     x = bret
@@ -334,8 +336,7 @@ plot_france_line <- function(
 }
 ```
 
-
-
+### Loop the data
 
 ```{r}
 date_list <- unique(france_official_sidep_sg_iris$date)
@@ -369,30 +370,33 @@ for(i in 1:length(date_list)){
   plot_france_line(
     my_data = my_data
     , plot_date = date_list[i]
-    , file_name = paste0((10000+i),".jpg")
+    , file_name = paste0(date_list[i],".jpg")
   )
 }
 
 
 ```
+    
+### make the video at 1 frame per seconde
 
-make the video at 1 frame per seconde
+Make the video
+`ffmpeg -framerate 1 -i 100%02d.jpg -c:v libx264 france_covid.mp4`
 
-ffmpeg -framerate 1 -i 100%02d.jpg -c:v libx264 france_covid.mp4
-
-loop and reverse the video 
+loop and reverse the video
 230 = 23s of video lenght x 2 x 5 times
-ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:230,setpts=N/1/TB" output.mp4
 
+`ffmpeg -i france_covid.mp4 -filter_complex "[0]reverse[r];[0][r]concat,loop=5:230,setpts=N/1/TB" output.mp4`
+    
 accelerate
-ffmpeg -i output.mp4 -r 8 -filter:v "setpts=0.125*PTS" output_final.mp4 
-
+`ffmpeg -i output.mp4 -r 8 -filter:v "setpts=0.125*PTS" output_final.mp4`
+    
 http://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
-
-
+    
+    
 ```{r}
 library(rayshader)
 plot_gg(g,multicore=TRUE,width=5,height=5,scale=250,windowsize=c(1400,866),
         zoom = 0.55, phi = 30)
 ```
-
+    
+    
