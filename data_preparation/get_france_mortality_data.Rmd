@@ -40,9 +40,9 @@ dataset has insee for source but gather already all past data.
 # 11Mo csv file 
 # https://www.insee.fr/fr/statistiques/4487988
 #insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
-insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
-# 540Mo csv file
-insee_dcd_all_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-06-19_detail.zip"
+#insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
+#insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-06-19_detail.zip"
+insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-12-11_detail.zip"
 ```
 
 
@@ -53,10 +53,11 @@ insee_dcd_all_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-
 ```{r getInsee2020}
 insee_dcd_file <- paste0(
   data_storage_url
-  , "insee.fr/mortality/raw/DC_2018-2020.csv"
+  , "insee.fr/mortality/raw/DC_2020_det.csv"
   )
 dcd_2020 <- data.table::fread(insee_dcd_file)
 ```
+
 
 ```{r overView2020mortality}
 head(dcd_2020) %>%
@@ -69,6 +70,7 @@ head(dcd_2020) %>%
 We map these data using same names as historical data (see later section)
 
 ```{r clean2020Mortality}
+dcd_2020_clean <- copy(dcd_2020)
 dcd_2020_clean <- dcd_2020[ , ':=' (
     sexe = SEXE
     , code_lieu_deces = COMDEC
@@ -76,8 +78,9 @@ dcd_2020_clean <- dcd_2020[ , ':=' (
     , date_naissance = as.Date(paste0(ANAIS,"-",MNAIS,"-",JNAIS))
   )]
 dcd_2020_clean[ , c(
-  "DEPDOM", "ADEC", "MDEC", "JDEC", "DEPDEC", "ANAIS", "MNAIS", "JNAIS", "SEXE",
-  "COMDEC"
+  #"DEPDOM",
+  "ADEC", "MDEC", "JDEC", "DEPDEC", "ANAIS", "MNAIS", "JNAIS", "SEXE",
+  "COMDEC", "COMDOM"
   , "LIEUDEC2" # could be interesting in a later stage
   ) := NULL ]
 dcd_2020_clean[ sexe == "F", sexe := "2" ]
@@ -182,8 +185,8 @@ Now we merge with recent data (removing recent months)
 ```{r mergeMortalityDatasets}
 dcd_all_clean <- rbindlist(
   list(
-    dcd_all_clean[ date_deces < "2019-01-01"]
-    , dcd_2020_clean[ date_deces >= "2019-01-01"]
+    dcd_all_clean[ date_deces < "2020-01-01"]
+    , dcd_2020_clean[ date_deces >= "2020-01-01"]
     )
   )
 ```

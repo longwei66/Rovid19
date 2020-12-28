@@ -105,7 +105,7 @@ load(file = "./latest/latest_rovid.Rda")
 We use the following epidemiologic parameters
 
 ```{r}
-last_date <- "2020-08-24"
+last_date <- "2020-12-12"
 r0_date <- "2020-03-01"
 ```
 

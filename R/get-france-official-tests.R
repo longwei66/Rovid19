@@ -30,7 +30,7 @@ getFranceOfficialTests <- function(
   # ===========================================================================
   message("------ get regions and department metadata")
   france_region_departements <- data.table::as.data.table(
-    read.csv(file = region_departements_url, sep = ",")
+    read.csv(file = region_departements_url, sep = ";")
   )
   regions <- as.data.table(read.csv(
     file= regions_url
@@ -131,8 +131,30 @@ getFranceOfficialTests <- function(
 
 
   message("------ get sidep incidence per iris code area")
-  france_official_sidep_sg_iris <- data.table::as.data.table(
-    read.csv(file = sidep_sg_iris_url, sep = ","))
+  ## Fix temporaire du au changement d'encodage du fichier source
+
+  # france_official_sidep_sg_iris <- data.table::as.data.table(
+  # read.csv(file = sidep_sg_iris_url, sep = ","))
+
+  # Start Fix
+
+  france_official_sidep_sg_iris <- read.csv(file = sidep_sg_iris_url, sep = ";", skip = 1)
+  names(france_official_sidep_sg_iris) <- c(
+    "iris2019","semaine_glissante","clage_65",
+    "ti_classe", "ti_classe2",
+    "td_classe", "td_classe2",
+    "tp_classe", "tp_classe2"
+    )
+  france_official_sidep_sg_iris$ti_classe <- paste0(france_official_sidep_sg_iris$ti_classe,";",france_official_sidep_sg_iris$ti_classe2)
+  france_official_sidep_sg_iris$td_classe <- paste0(france_official_sidep_sg_iris$td_classe,";",france_official_sidep_sg_iris$td_classe2)
+  france_official_sidep_sg_iris$tp_classe <- paste0(france_official_sidep_sg_iris$tp_classe,";",france_official_sidep_sg_iris$tp_classe2)
+  france_official_sidep_sg_iris$ti_classe2 <- NULL
+  france_official_sidep_sg_iris$td_classe2 <- NULL
+  france_official_sidep_sg_iris$tp_classe2 <- NULL
+  france_official_sidep_sg_iris <- data.table::as.data.table(france_official_sidep_sg_iris)
+
+  ## End fix
+
   france_official_sidep_sg_iris <- france_official_sidep_sg_iris %>%
     mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
     mutate(week = lubridate::isoweek(date)) %>%
