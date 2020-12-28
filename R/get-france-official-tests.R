@@ -12,9 +12,7 @@
 #'  getFranceOfficialEmmergency()
 #' }
 getFranceOfficialTests <- function(
-  tests_dep_url = "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20"
-  , tests_dep_codebook_url = "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e"
-  , sidep_dep_url = "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76"
+  sidep_dep_url = "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76"
   , sidep_dep_codebook_url = "https://www.data.gouv.fr/en/datasets/r/a8b5931a-3aa7-4aec-a81b-8b3de628cf63"
   , sidep_reg_url = "https://www.data.gouv.fr/en/datasets/r/ad09241e-52fa-4be8-8298-e5760b43cae2"
   , sidep_total_url = "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c"
@@ -30,67 +28,49 @@ getFranceOfficialTests <- function(
   # ===========================================================================
   message("------ get regions and department metadata")
   france_region_departements <- data.table::as.data.table(
-    read.csv(file = region_departements_url, sep = ";")
+    read.csv(file = region_departements_url, sep = ",")
   )
+  if(
+    ! identical(
+      names(france_region_departements),
+      c("num_dep", "dep_name","region_name"))
+  ) {
+      stop("error in region_departements_url")
+  } else {
+    message("ok region_departements_url")
+    }
   regions <- as.data.table(read.csv(
     file= regions_url
     , sep = ";"))
+  if(
+    ! identical(
+      names(regions),
+      c("Geo.Point", "Geo.Shape", "Code.INSEE",
+        "Nom.région", "Nom.de.la.région..MAJUSCULE.","code_region1",
+        "outre_mer", "code_region", "CTU.et.Collectivité.Territoriale.de.Corse"))
+  ) {
+    stop("error in regions_url")
+  } else {
+    message("ok regions_url")
+  }
+
   regions <- regions %>%
     mutate( code_insee = Code.INSEE, region_name = Nom.région) %>%
     select(code_insee, region_name)
 
-  message("------ get pre-sidep tests per department codebook")
-  france_official_tests_dep_codebook <- data.table::as.data.table(
-    read.csv(file = tests_dep_codebook_url
-             , sep = ";", header = T, stringsAsFactors = F)
-    )
-
-  message("------ get pre-sidep tests per department")
-  france_official_tests_dep <- data.table::as.data.table(
-    read.csv(file = tests_dep_url, sep = ";")
-    )
-  france_official_tests_dep %>%
-    rename(
-      department = dep
-      , date = jour
-    ) %>%
-    mutate(
-      date = as.Date(date)
-    )-> france_official_tests_dep
-  france_official_tests_dep <- data.table::as.data.table(merge(
-    france_official_tests_dep
-    , france_region_departements
-    , by.x = "department"
-    , by.y = "num_dep"
-  ))
-  france_official_tests_dep %>%
-    group_by(region_name,date,clage_covid) %>%
-    summarise(
-      nb_test = sum(nb_test, na.rm=TRUE)
-      , nb_pos = sum(nb_pos, na.rm = TRUE)
-      , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-      , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-      , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-      , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-    ) %>%
-    ungroup() %>%
-    data.table::as.data.table()-> france_official_tests_reg
-  france_official_tests_dep %>%
-    group_by(date,clage_covid) %>%
-    summarise(
-      nb_test = sum(nb_test, na.rm=TRUE)
-      , nb_pos = sum(nb_pos, na.rm = TRUE)
-      , nb_test_h = sum(nb_test_h, na.rm = TRUE)
-      , nb_pos_h = sum(nb_pos_h, na.rm = TRUE)
-      , nb_test_f = sum(nb_test_f, na.rm = TRUE)
-      , nb_pos_f = sum(nb_pos_f, na.rm = TRUE)
-    ) %>%
-    ungroup() %>%
-    data.table::as.data.table()-> france_official_tests_total
 
   message("------ get sidep tests per department codebook")
   france_official_sidep_dep <- data.table::as.data.table(
     read.csv(file = sidep_dep_url, sep = ";"))
+  if(
+    ! identical(
+      names(france_official_sidep_dep),
+      c("dep","jour","P","cl_age90","pop"))
+  ) {
+    stop("error in sidep_dep_url")
+  } else {
+    message("ok sidep_dep_url")
+  }
   france_official_sidep_dep %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
@@ -106,6 +86,15 @@ getFranceOfficialTests <- function(
   message("------ get sidep tests per regions")
   france_official_sidep_reg <- data.table::as.data.table(
     read.csv(file = sidep_reg_url, sep = ";"))
+  if(
+    ! identical(
+      names(france_official_sidep_reg),
+      c("reg","jour","P_f","P_h","P","pop_f","pop_h","cl_age90","pop" ))
+  ) {
+    stop("error in sidep_reg_url")
+  } else {
+    message("ok sidep_reg_url")
+  }
   france_official_sidep_reg %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
@@ -123,6 +112,16 @@ getFranceOfficialTests <- function(
   message("------ get sidep tests per country")
   france_official_sidep_total <- data.table::as.data.table(
     read.csv(file = sidep_total_url, sep = ";"))
+  if(
+    ! identical(
+      names(france_official_sidep_total),
+      c("fra","jour","P_f","P_h","P","pop_f","pop_h","cl_age90","pop"))
+  ) {
+    stop("error in sidep_total_url")
+  } else {
+    message("ok sidep_total_url")
+  }
+
   france_official_sidep_total %>%
     mutate(date = as.Date(jour)) %>%
     mutate(cl_age90 = as.factor(cl_age90)) %>%
@@ -139,6 +138,14 @@ getFranceOfficialTests <- function(
   # Start Fix
 
   france_official_sidep_sg_iris <- read.csv(file = sidep_sg_iris_url, sep = ";", skip = 1)
+  if(
+    ncol(france_official_sidep_sg_iris) != 9
+  ) {
+    stop("error in sidep_sg_iris_url")
+  } else {
+    message("ok sidep_sg_iris_url")
+  }
+
   names(france_official_sidep_sg_iris) <- c(
     "iris2019","semaine_glissante","clage_65",
     "ti_classe", "ti_classe2",
@@ -170,11 +177,11 @@ getFranceOfficialTests <- function(
 
   return(
     list(
-      tests_dep_codebook = france_official_tests_dep_codebook
-      , tests_dep = france_official_tests_dep
-      , tests_reg = france_official_tests_reg
-      , tests_total = france_official_tests_total
-      , sidep_dep = france_official_sidep_dep
+      #tests_dep_codebook = france_official_tests_dep_codebook
+      #, tests_dep = france_official_tests_dep
+      #, tests_reg = france_official_tests_reg
+      #, tests_total = france_official_tests_total
+      sidep_dep = france_official_sidep_dep
       , sidep_reg = france_official_sidep_reg
       , sidep_total = france_official_sidep_total
       , sidep_sg_iris = france_official_sidep_sg_iris
