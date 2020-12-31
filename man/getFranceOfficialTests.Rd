@@ -6,10 +6,6 @@
 \usage{
 getFranceOfficialTests(
  
-    tests_dep_url = "https://www.data.gouv.fr/fr/datasets/r/b4ea7b4b-b7d1-4885-a099-71852291ff20",
- 
-    tests_dep_codebook_url = "https://www.data.gouv.fr/fr/datasets/r/971c5cbd-cd80-4492-b2b3-c3deff8c1f5e",
- 
     sidep_dep_url = "https://www.data.gouv.fr/en/datasets/r/19a91d64-3cd3-42fc-9943-d635491a4d76",
  
     sidep_dep_codebook_url = "https://www.data.gouv.fr/en/datasets/r/a8b5931a-3aa7-4aec-a81b-8b3de628cf63",
