@@ -35,10 +35,10 @@ getFranceOfficialTests <- function(
       names(france_region_departements),
       c("num_dep", "dep_name","region_name"))
   ) {
-      stop("error in region_departements_url")
+    stop("error in region_departements_url")
   } else {
     message("ok region_departements_url")
-    }
+  }
   regions <- as.data.table(read.csv(
     file= regions_url
     , sep = ";"))
@@ -130,47 +130,54 @@ getFranceOfficialTests <- function(
 
 
   message("------ get sidep incidence per iris code area")
-  ## Fix temporaire du au changement d'encodage du fichier source
-
-  # france_official_sidep_sg_iris <- data.table::as.data.table(
-  # read.csv(file = sidep_sg_iris_url, sep = ","))
-
-  # Start Fix
-
-  france_official_sidep_sg_iris <- read.csv(file = sidep_sg_iris_url, sep = ";", skip = 1)
+  france_official_sidep_sg_iris <- data.table::as.data.table(
+    read.csv(
+      file = sidep_sg_iris_url
+      , sep = ","
+    )
+  )
   if(
-    ncol(france_official_sidep_sg_iris) != 9
+    ncol(france_official_sidep_sg_iris) != 6
   ) {
     stop("error in sidep_sg_iris_url")
   } else {
     message("ok sidep_sg_iris_url")
+    france_official_sidep_sg_iris <- france_official_sidep_sg_iris %>%
+      mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
+      mutate(week = lubridate::isoweek(date)) %>%
+      mutate( ti_class_low = as.numeric(gsub(pattern = "^\\[([0-9]*);.*", replacement = "\\1", x = ti_classe))) %>%
+      mutate( ti_class_high = gsub(pattern = "^\\[[0-9]*;(.*)(\\[|\\])$", replacement = "\\1", x = ti_classe)) %>%
+      mutate(ti_class_high = replace(ti_class_high, ti_class_high=="Max", "1000")) %>%
+      mutate(ti_class_high = as.numeric(ti_class_high)) %>%
+      mutate(ti_class_low = as.numeric(ti_class_low)) %>%
+      mutate( ti_class_mean = (ti_class_high + ti_class_low) / 2)
   }
-
-  names(france_official_sidep_sg_iris) <- c(
-    "iris2019","semaine_glissante","clage_65",
-    "ti_classe", "ti_classe2",
-    "td_classe", "td_classe2",
-    "tp_classe", "tp_classe2"
-    )
-  france_official_sidep_sg_iris$ti_classe <- paste0(france_official_sidep_sg_iris$ti_classe,";",france_official_sidep_sg_iris$ti_classe2)
-  france_official_sidep_sg_iris$td_classe <- paste0(france_official_sidep_sg_iris$td_classe,";",france_official_sidep_sg_iris$td_classe2)
-  france_official_sidep_sg_iris$tp_classe <- paste0(france_official_sidep_sg_iris$tp_classe,";",france_official_sidep_sg_iris$tp_classe2)
-  france_official_sidep_sg_iris$ti_classe2 <- NULL
-  france_official_sidep_sg_iris$td_classe2 <- NULL
-  france_official_sidep_sg_iris$tp_classe2 <- NULL
-  france_official_sidep_sg_iris <- data.table::as.data.table(france_official_sidep_sg_iris)
-
+  ## Fix temporaire du au changement d'encodage du fichier source
+  # Start Fix
+  # france_official_sidep_sg_iris <- read.csv(file = sidep_sg_iris_url, sep = ";", skip = 1)
+  # if(
+  #   ncol(france_official_sidep_sg_iris) != 9
+  # ) {
+  #   stop("error in sidep_sg_iris_url")
+  # } else {
+  #   message("ok sidep_sg_iris_url")
+  #   names(france_official_sidep_sg_iris) <- c(
+  #     "iris2019","semaine_glissante","clage_65",
+  #     "ti_classe", "ti_classe2",
+  #     "td_classe", "td_classe2",
+  #     "tp_classe", "tp_classe2"
+  #   )
+  #   france_official_sidep_sg_iris$ti_classe <- paste0(france_official_sidep_sg_iris$ti_classe,";",france_official_sidep_sg_iris$ti_classe2)
+  #   france_official_sidep_sg_iris$td_classe <- paste0(france_official_sidep_sg_iris$td_classe,";",france_official_sidep_sg_iris$td_classe2)
+  #   france_official_sidep_sg_iris$tp_classe <- paste0(france_official_sidep_sg_iris$tp_classe,";",france_official_sidep_sg_iris$tp_classe2)
+  #   france_official_sidep_sg_iris$ti_classe2 <- NULL
+  #   france_official_sidep_sg_iris$td_classe2 <- NULL
+  #   france_official_sidep_sg_iris$tp_classe2 <- NULL
+  #   france_official_sidep_sg_iris <- data.table::as.data.table(france_official_sidep_sg_iris)
+  # }
   ## End fix
 
-  france_official_sidep_sg_iris <- france_official_sidep_sg_iris %>%
-    mutate(date = as.Date(x = gsub(pattern = ".*([0-9]{4}-[0-9]{2}-[0-9]{2})$",replacement = "\\1", x = semaine_glissante))) %>%
-    mutate(week = lubridate::isoweek(date)) %>%
-    mutate( ti_class_low = as.numeric(gsub(pattern = "^\\[([0-9]*);.*", replacement = "\\1", x = ti_classe))) %>%
-    mutate( ti_class_high = gsub(pattern = "^\\[[0-9]*;(.*)(\\[|\\])$", replacement = "\\1", x = ti_classe)) %>%
-    mutate(ti_class_high = replace(ti_class_high, ti_class_high=="Max", "1000")) %>%
-    mutate(ti_class_high = as.numeric(ti_class_high)) %>%
-    mutate(ti_class_low = as.numeric(ti_class_low)) %>%
-    mutate( ti_class_mean = (ti_class_high + ti_class_low) / 2)
+
 
   #, sidep_sg_epci_url = "https://www.data.gouv.fr/fr/datasets/r/34dcc90c-aec9-48ee-9fd3-a972b44202c0"
   #, sidep_sg_com_url = "https://www.data.gouv.fr/fr/datasets/r/c2e2e844-9671-4f81-8c81-1b79f7687de3"
