@@ -164,7 +164,8 @@ iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_l
 my_data <- iris_sp_latest[ 
   #iris_sp_latest$REG %in% c(11)  #& 
   iris_sp_latest$DEP %in% c("92")
-  & iris_sp_latest$clage_65 == 0,
+  & iris_sp_latest$clage_65 == 0
+  ,
 ]
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 g <- ggplot(data = my_data)
