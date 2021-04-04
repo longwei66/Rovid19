@@ -191,14 +191,19 @@ Prepare the grid for linemapping
 ```{r}
 #my_data <- iris_sp_latest[ iris_sp_latest$DEP %in% c("92"),]
 my_data <- iris_sp_latest[ 
-  iris_sp_latest$REG %in% c(84, 32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 11) & iris_sp_latest$clage_65 == 0,
+  iris_sp_latest$REG %in% c(
+    84, 
+    32
+    , 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 
+    11
+    ) & iris_sp_latest$clage_65 == 0,
 ]
 #plot(st_geometry(my_data))
     
     
 bret <- getgrid(
   x = my_data
-  , cellsize = 3000
+  , cellsize = 3000 #3000
   , var = "cases" #"ti_class_mean"
   #, var = "P16_POP" #"cases"
 )
@@ -251,8 +256,8 @@ linemap(
   , var = "cases" #"ti_class_mean"
   #, var = "P16_POP" #"cases"
   #, k = 2
-  , k = 150 #1
-  , threshold = 1
+  , k = 150 #150 for France 300 for region
+  , threshold = 1 #1
   #, col = "lightblue3"
   , col = "lightgrey"
   #, border = "white"
@@ -270,6 +275,9 @@ dev.off()
 ```{r}
 plot_france_line <- function(
   my_data = null # source data
+  , my_cellsize = 3000 # 3000 for France 1000 for a region
+  , my_k = 150 # 150 for France, 300 for a region
+  , my_threshold = 1 # 1 for France, 0 for region
   , plot_date = null
   , file_name = null
 ){
@@ -277,7 +285,7 @@ plot_france_line <- function(
   message("===== get grid ======")
   bret <- getgrid(
     x = my_data
-    , cellsize = 3000
+    , cellsize = my_cellsize
     #, var = "ti_class_mean"
     , var = "cases"
   )
@@ -326,8 +334,8 @@ plot_france_line <- function(
     #, var = "ti_class_mean"
     , var = "cases"
     #, k = 2
-    , k = 150
-    , threshold = 1
+    , k = my_k
+    , threshold = my_threshold
     , col = "lightgrey"
     , border = "black"
     , lwd = 2, add = TRUE
@@ -365,7 +373,11 @@ for(i in 1:length(date_list)){
   iris_sp_latest[iris_sp_latest$clage_65 == 65,]$cases <- iris_sp_latest[iris_sp_latest$clage_65 == 65,]$P16_POP *  iris_sp_latest[iris_sp_latest$clage_65 == 65,]$ti_class_mean / 100000
   
   my_data <- iris_sp_latest[ 
-    iris_sp_latest$REG %in% c(84, 32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 11) & iris_sp_latest$clage_65 == 0,
+    iris_sp_latest$REG %in% c(
+      84, 
+      32, 93, 44, 76, 28, 75, 24, 27, 53, 94, 52, 
+      11
+      ) & iris_sp_latest$clage_65 == 0,
   ]
   
   plot_france_line(

@@ -130,6 +130,7 @@ compile the data only per country.
 #### Cumulative cases in France
 
 ```{r}
+RCurl::curlSetOpt(timeout = 200)
 france_com <- Rovid19::getOpenCovidFr()
 france_com_cases_cum <- france_com$cases_cum
 ```

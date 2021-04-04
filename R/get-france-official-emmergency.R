@@ -20,7 +20,8 @@ getFranceOfficialEmmergency <- function(
   , emergency_total_codebook_url = "https://www.data.gouv.fr/fr/datasets/r/0289e4fe-bb67-42b9-a320-cd22c98d82c3"
   , age_categories_url = "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6"
   #, regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-des-regions-2019-copy@public/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=%3B"
-  , regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-simplifies-des-nouvelles-regions-metropole@public/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=%3B"
+  #, regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-simplifies-des-nouvelles-regions-metropole@public/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=%3B"
+  , regions_url = "https://data.opendatasoft.com/explore/dataset/georef-france-region@datanova/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=%3B"
   , region_departements_url = "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
 ){
 
@@ -71,12 +72,21 @@ getFranceOfficialEmmergency <- function(
     read.csv(file = emergency_reg_url, sep = ";")
   )
 
+  # regions <- as.data.table(read.csv(
+  #   file= regions_url
+  #   , sep = ";"))
+  # regions <- regions %>%
+  #   mutate( code_insee = New.Code , region_name = Région) %>%
+  #   select(code_insee, region_name)
+  #
   regions <- as.data.table(read.csv(
     file= regions_url
     , sep = ";"))
   regions <- regions %>%
-    mutate( code_insee = New.Code , region_name = Région) %>%
+    mutate( code_insee = Code.Officiel.Région , region_name = Nom.Officiel.Région) %>%
     select(code_insee, region_name)
+
+
 
   france_official_emergency_reg <- merge(
     x = france_official_emergency_reg

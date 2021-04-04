@@ -20,7 +20,7 @@ getFranceOfficialEmmergency(
  
     age_categories_url = "https://www.data.gouv.fr/fr/datasets/r/cbed61a8-64e8-4c8c-8e97-65d3a31a99b6",
  
-    regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-simplifies-des-nouvelles-regions-metropole@public/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=\%3B",
+    regions_url = "https://data.opendatasoft.com/explore/dataset/georef-france-region@datanova/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=\%3B",
  
     region_departements_url = "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84"
 )

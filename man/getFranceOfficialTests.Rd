@@ -14,7 +14,7 @@ getFranceOfficialTests(
  
     sidep_total_url = "https://www.data.gouv.fr/en/datasets/r/57d44bd6-c9fd-424f-9a72-7834454f9e3c",
  
-    regions_url = "https://data.opendatasoft.com/explore/dataset/contours-geographiques-des-regions-2019-copy@public/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true&csv_separator=\%3B",
+    regions_url = "https://data.opendatasoft.com/explore/dataset/georef-france-region@datanova/download/?format=csv&timezone=Europe/Berlin&lang=fr&use_labels_for_header=true&csv_separator=\%3B",
  
     region_departements_url = "https://www.data.gouv.fr/en/datasets/r/987227fb-dcb2-429e-96af-8979f97c9c84",
  
