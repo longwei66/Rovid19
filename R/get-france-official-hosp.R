@@ -48,7 +48,8 @@ getFranceOfficialHosp <- function(
     ) %>%
     mutate(
       date = as.Date(date)
-    )-> france_official_hospital_dep
+    ) %>%
+    dplyr::mutate( sex = as.factor(sex)) -> france_official_hospital_dep
 
   france_official_hospital_dep <- data.table::as.data.table(merge(
     france_official_hospital_dep
@@ -67,6 +68,7 @@ getFranceOfficialHosp <- function(
       , death_cum = sum(death_cum, na.rm = TRUE)
     ) %>%
     dplyr::ungroup() %>%
+    dplyr::mutate( sex = as.factor(sex)) %>%
     data.table::as.data.table()-> france_official_reg
 
   france_official_hospital_dep %>%

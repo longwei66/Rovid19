@@ -42,7 +42,8 @@ dataset has insee for source but gather already all past data.
 #insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
 #insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-05-15_detail.zip"
 #insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-06-19_detail.zip"
-insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-12-11_detail.zip"
+#insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2020-12-11_detail.zip"
+insee_dcd_2021_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/4487988/2021-04-02_detail.zip"
 ```
 
 
@@ -53,7 +54,7 @@ insee_dcd_2020_remote_url <- "https://www.insee.fr/fr/statistiques/fichier/44879
 ```{r getInsee2020}
 insee_dcd_file <- paste0(
   data_storage_url
-  , "insee.fr/mortality/raw/DC_2020_det.csv"
+  , "insee.fr/mortality/raw/DC_20202021_det.csv"
   )
 dcd_2020 <- data.table::fread(insee_dcd_file)
 ```
@@ -175,7 +176,7 @@ g <- g + xlab(label = "Date") + ylab(label = "Daily death")
 g
 ```
 
-The two datasets seems to match thus we will usz 2019-01-01 as cut-off date.
+The two datasets seems to match thus we will usz 2020-01-01 as cut-off date.
 
 
 ## Merge data

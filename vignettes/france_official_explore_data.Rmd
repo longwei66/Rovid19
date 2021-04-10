@@ -109,19 +109,21 @@ h <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "hospitalized_now"
   , colfeature = "region_name"
+  , ncol = 6
 )
 h
 ```
 
-### Currently back home
+
 
 ```{r plotHome}
-ho <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ sex == 0 ]
-  , myvariable = "back_home_now"
-  , colfeature = "region_name"
-)
-ho
+### Currently back home
+#ho <- plotSmallMultipleCovid(
+#  my_data = france_official_hospital_dep[ sex == 0 ]
+#  , myvariable = "back_home_now"
+#  , colfeature = "region_name"
+#)
+#ho
 ```
 
 ### Currently in ICU
@@ -131,6 +133,7 @@ i <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "icu_now"
   , colfeature = "region_name"
+  , ncol = 6
 )
 i
 ```
@@ -142,6 +145,7 @@ g <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ sex == 0 ]
   , myvariable = "death_cum"
   , colfeature = "region_name"
+  , ncol = 6
 )
 g
 ```
@@ -151,33 +155,36 @@ g
 ### Zoom : Ile de France
 
 ```{r plotIdfHosp}
-idf_home <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
-  , myvariable = "back_home_now"
-  , colfeature = "department"
-  , ncol = 3
-)
+#idf_home <- plotSmallMultipleCovid(
+#  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
+#  , myvariable = "back_home_now"
+#  , colfeature = "department"
+#  , ncol = 3
+#)
 idf_hosp <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "hospitalized_now"
   , colfeature = "department"
   , ncol = 3
-)
-idf_dead <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
-  , myvariable = "death_cum"
-  , colfeature = "department"
-  , ncol = 3
+  , facetscales = NULL
 )
 idf_icu <- plotSmallMultipleCovid(
   my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
   , myvariable = "icu_now"
   , colfeature = "department"
   , ncol = 3
+  , facetscales = NULL
+)
+idf_dead <- plotSmallMultipleCovid(
+  my_data = france_official_hospital_dep[ region_name == "Île-de-France" & sex == 0 ]
+  , myvariable = "death_cum"
+  , colfeature = "department"
+  , ncol = 8
+  , facetscales = NULL
 )
 
 
-( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+( idf_hosp + idf_icu ) / (idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
 
@@ -185,33 +192,33 @@ idf_icu <- plotSmallMultipleCovid(
 ### Zoom : 92 - Hauts-de-Seine
 
 ```{r plotId92fHosp}
-idf_home <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
-  , myvariable = "back_home_now"
-  , colfeature = "department"
-  , ncol = 3
-)
+#idf_home <- plotSmallMultipleCovid(
+#  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+#  , myvariable = "back_home_now"
+#  , colfeature = "department"
+#  , ncol = 3
+#)
 idf_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  my_data = france_official_hospital_dep[ department == "92" & sex != 0 ]
   , myvariable = "hospitalized_now"
-  , colfeature = "department"
+  , colfeature = "sex"
   , ncol = 3
 )
 idf_dead <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  my_data = france_official_hospital_dep[ department == "92" & sex != 0 ]
   , myvariable = "death_cum"
-  , colfeature = "department"
+  , colfeature = "sex"
   , ncol = 3
 )
 idf_icu <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_dep[ department == "92" & sex == 0 ]
+  my_data = france_official_hospital_dep[ department == "92" & sex != 0 ]
   , myvariable = "icu_now"
-  , colfeature = "department"
+  , colfeature = "sex"
   , ncol = 3
 )
 
 
-( idf_home + idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+( idf_hosp ) / ( idf_icu + idf_dead) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 
 ```
 
@@ -227,23 +234,12 @@ h <- plotSmallMultipleCovid(
   , facetfeature = "region_name"
   , ncol = 6
   , mytitle_base = "France per regions : "
+  , facetscales = NULL
 )
 h
 ```
 
-### Currently back home
 
-```{r plotHomeR}
-ho <- plotSmallMultipleCovid(
-  my_data = france_official_reg[ sex == 0 ]
-  , myvariable = "back_home_now"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 6
-  , mytitle_base = "France per regions : "
-)
-ho
-```
 
 ### Currently in ICU
 
@@ -255,6 +251,7 @@ i <- plotSmallMultipleCovid(
   , facetfeature = "region_name"
   , ncol = 6
   , mytitle_base = "France per regions : "
+   , facetscales = NULL
 )
 i
 ```
@@ -269,6 +266,7 @@ g <- plotSmallMultipleCovid(
   , facetfeature = "region_name"
   , ncol = 6
   , mytitle_base = "France per regions : "
+  , facetscales = NULL
 )
 g
 ```
@@ -286,16 +284,9 @@ hosp <- plotSmallMultipleCovid(
   , facetfeature = "sex"
   , ncol = 3
   , mytitle_base = "France  : "
+  , facetscales = NULL
 )
 
-home <- plotSmallMultipleCovid(
-  my_data = france_official_hospital_total[ sex == 0 | TRUE ]
-  , myvariable = "back_home_now"
-  , colfeature = "sex"
-  , facetfeature = "sex"
-  , ncol = 3
-  , mytitle_base = "France  : "
-)
 
 icu <- plotSmallMultipleCovid(
   my_data = france_official_hospital_total[ sex == 0 | TRUE ]
@@ -304,6 +295,7 @@ icu <- plotSmallMultipleCovid(
   , facetfeature = "sex"
   , ncol = 3
   , mytitle_base = "France  : "
+  , facetscales = NULL
 )
 
 
@@ -316,7 +308,7 @@ dcd <- plotSmallMultipleCovid(
   , mytitle_base = "France  : "
 )
 
-( hosp + home ) / ( icu + dcd) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
+( hosp + icu ) / ( dcd) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
 ```
 
 
@@ -389,7 +381,7 @@ plotLogGrowth <- function(
       tibble(!!colfeature := "x2 every week", days_since_10 = 0:max_x) %>%
         mutate(!!myvariable := start_case*(2^(1/7))^days_since_10)
     ) %>%
-    ungroup() -> my_df
+    ungroup() #-> my_df
   
   
   my_df %>%
@@ -458,11 +450,6 @@ my_df <- france_official_hospital_dep[
   sex == 0
 ] 
 
-home <- plotLogGrowth(
-  mydata = my_df
-  , start_case = 100
-  , myvariable = "back_home_now" #death_cum"
-)
 hosp <- plotLogGrowth(
   mydata = my_df
   , start_case = 500
@@ -478,7 +465,7 @@ icu <- plotLogGrowth(
   , start_case = 100
   , myvariable = "icu_now" #death_cum"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph ) + 
+(hosp$graph + icu$graph ) / (  death$graph ) + 
   plot_annotation(
     title = "Covid-19 France Hospital data by departments"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
@@ -488,18 +475,12 @@ icu <- plotLogGrowth(
 
 ### Per regions
 
-```{r logWorstReg, eval=FALSE, include=FALSE}
+```{r logWorstReg, eval=FALSE, include=T}
 my_df <- france_official_reg[ 
   #region_name == "Île-de-France" &
   sex == 0
 ] 
 
-home <- plotLogGrowth(
-  mydata = my_df
-  , start_case = 300
-  , myvariable = "back_home_now" #death_cum"
-  , colfeature = "region_name"
-)
 hosp <- plotLogGrowth(
   mydata = my_df
   , start_case = 700
@@ -518,7 +499,7 @@ icu <- plotLogGrowth(
   , myvariable = "icu_now" #death_cum"
   , colfeature = "region_name"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph )  + 
+(home$graph | icu$graph ) / ( death$graph )  + 
   plot_annotation(
     title = "Covid-19 France Hospital data by regions"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
@@ -529,37 +510,31 @@ icu <- plotLogGrowth(
 
 ### France Total
 
-```{r logWorstFRTot, eval=FALSE, include=FALSE}
+```{r logWorstFRTot, eval=FALSE, include=T}
 my_df <- france_official_hospital_total[ 
   #region_name == "Île-de-France" &
   sex == 0 | TRUE
 ] 
 
-home <- plotLogGrowth(
-  mydata = my_df
-  , start_case = 1000
-  , myvariable = "back_home_now" #death_cum"
-  , colfeature = "sex"
-)
 hosp <- plotLogGrowth(
-  mydata = my_df
+  mydata = my_df[ sex != 0]
   , start_case = 3000
   , myvariable = "hospitalized_now" #death_cum"
   , colfeature = "sex"
 )
 death <- plotLogGrowth(
-  mydata = my_df
+  mydata = my_df[ sex != 0]
   , start_case = 200
   , myvariable = "death_cum" #death_cum"
   , colfeature = "sex"
 )
 icu <- plotLogGrowth(
-  mydata = my_df
+  mydata = my_df[ sex != 0]
   , start_case = 1000
   , myvariable = "icu_now" #death_cum"
   , colfeature = "sex"
 )
-(home$graph | hosp$graph) / ( icu$graph | death$graph )  + 
+(home$graph | icu$graph ) / ( death$graph )  + 
   plot_annotation(
     title = "Covid-19 France Hospital data by genre"
     , subtitle = "by datapleth.io inspired by @jburnmurdoch"
@@ -583,6 +558,7 @@ h <- plotSmallMultipleCovid(
   , myvariable = "nbre_pass_tot"
   , colfeature = "region_name" 
   , facetfeature = "dep"
+  , ncol = 6
 )
 h
 ```
@@ -596,6 +572,7 @@ h <- plotSmallMultipleCovid(
   , myvariable = "nbre_pass_corona"
   , colfeature = "region_name" 
   , facetfeature = "dep_name"
+  , ncol = 6
 )
 h
 ```
@@ -610,6 +587,7 @@ h <- plotSmallMultipleCovid(
   , myvariable = "nbre_hospit_corona"
   , colfeature = "region_name" 
   , facetfeature = "dep_name"
+  , ncol = 6
 )
 h
 ```
@@ -619,7 +597,7 @@ Heatmap
 ```{r heatmapPerDep}
 g <- ggplot(france_official_emergency_dep[ sursaud_cl_age_corona != "0" ], aes(date, sursaud_cl_age_corona, fill= nbre_hospit_corona)) +
   geom_tile() + 
-  facet_wrap(facets = . ~ dep_name, ncol = 10) +
+  facet_wrap(facets = . ~ dep_name, ncol = 6) +
   scale_fill_viridis(
     option = "magma" #"heat"
     , direction = -1
@@ -855,115 +833,6 @@ idf_sos_coro <- plotSmallMultipleCovid(
 
 ```
 
-
-### Zoom : Mayenne 53
-
-```{r plotLotER46}
-idf_er_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & dep == "53"]
-  , myvariable = "nbre_pass_tot"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Mayenne 53 - Emergency "
-)
-idf_er_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
-  , myvariable = "nbre_pass_corona"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Mayenne 53 - Emergency "
-)
-idf_er_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
-  , myvariable = "nbre_hospit_corona"
-  , colfeature = "dep_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Mayenne 53 - Emergency "
-)
-idf_sos_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
-  , myvariable = "nbre_acte_tot"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Mayenne 53 - SOS "
-)
-idf_sos_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" &  dep == "53"]
-  , myvariable = "nbre_acte_corona"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Mayenne 53 - SOS "
-)
-
-
-( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
-
-```
-
-
-
-
-### Zoom : Grand Est
-
-```{r plotGEER}
-idf_er_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
-  , myvariable = "nbre_pass_tot"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Grand Est - Emergency "
-)
-idf_er_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
-  , myvariable = "nbre_pass_corona"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Grand Est - Emergency "
-)
-idf_er_hosp <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
-  , myvariable = "nbre_hospit_corona"
-  , colfeature = "dep_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Grand Est - Emergency "
-)
-
-idf_sos_tot <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
-  , myvariable = "nbre_acte_tot"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Grand Est - SOS "
-)
-idf_sos_coro <- plotSmallMultipleCovid(
-  my_data = france_official_emergency_dep[ sursaud_cl_age_corona == "0" & region_name == "Grand Est"]
-  , myvariable = "nbre_acte_corona"
-  , colfeature = "region_name"
-  , facetfeature = "region_name"
-  , ncol = 3
-  , mytitle_base = "Grand Est - SOS "
-)
-
-( idf_er_tot + idf_er_coro ) / idf_er_hosp / ( idf_sos_tot + idf_sos_coro) + patchwork::plot_annotation("CC BY-NC-SA datapleth.io")
-
-```
-
-
-
-
-
-
-
-
 ## France Total
 
 
@@ -1072,28 +941,6 @@ h / g
 
 ```
 
-### Mayenne
-
-```{r plotsidepTotdep2}
-h <- plotSmallMultipleCovid(
-  my_data = france_official_sidep_dep[ cl_age90 != 0 & dep == "53" ]
-  , myvariable = "P"
-  , colfeature = "cl_age90" 
-  , facetfeature = "cl_age90"
-  , facetscales = NULL
-  , mytitle_base = "Mayenne SI-DEP positive tests per age category "
-)
-g <- plotSmallMultipleCovid(
-  my_data = france_official_sidep_dep[ cl_age90 == 0 & dep == "53" ]
-  , myvariable = "P"
-  , colfeature = "region_name" 
-  , facetfeature = "dep"
-  , mytitle_base = "Mayenne SI-DEP positive tests "
-)
-h / g
-
-```
-
 
 ### Zoom Ile-de-France
 
@@ -1186,7 +1033,7 @@ h
 ```{r heatmapPerRegions}
 g <- ggplot(france_official_sidep_reg[ cl_age90 != "0" ], aes(date, cl_age90, fill= P)) +
   geom_tile() + 
-  facet_wrap(facets = . ~ region_name) +
+  facet_wrap(facets = . ~ region_name, ncol = 3) +
   scale_fill_viridis(
     option = "magma" #"heat"
     , direction = -1
@@ -1206,7 +1053,7 @@ h1 <- plotSmallMultipleCovid(
   , colfeature = "cl_age90" 
   , facetfeature = "cl_age90"
   , mytitle_base = "France SI-DEP positive tests per age categories"
-  , ncol = 10
+  , ncol = 5
   , facetscales = NULL
 )
 h2 <- plotSmallMultipleCovid(
