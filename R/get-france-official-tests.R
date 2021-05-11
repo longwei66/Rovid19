@@ -51,7 +51,7 @@ getFranceOfficialTests <- function(
         "Geo.Point", "Geo.Shape", "Année", "Code.Officiel.Région",
         "Code.Officiel.Courant.Région", "Nom.Officiel.Région",
         "Nom.Officiel.Région.Majuscule", "Nom.Officiel.Région.Minuscule",
-        "Code.Iso.3166.3.Zone", "Type", "Est.une.CTU",  "SIREN"
+        "Code.Iso.3166.3.Zone", "Type", "viewport", "Est.une.CTU",  "SIREN"
         )
       )
   ) {
