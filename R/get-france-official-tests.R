@@ -43,18 +43,23 @@ getFranceOfficialTests <- function(
   regions <- as.data.table(read.csv(
     file= regions_url
     , sep = ";"))
+
+  std_names_region <- c(
+    "Geo.Point", "Geo.Shape", "Année", "Code.Officiel.Région",
+    "Code.Officiel.Courant.Région", "Nom.Officiel.Région",
+    "Nom.Officiel.Région.Majuscule", "Nom.Officiel.Région.Minuscule",
+    "Code.Iso.3166.3.Zone", "Type", "Est.une.CTU",  "SIREN"
+  )
+
   if(
     ! identical(
       names(regions),
       #c("geo_point", "geo_shape", "Région", "New.Code" )
-      c(
-        "Geo.Point", "Geo.Shape", "Année", "Code.Officiel.Région",
-        "Code.Officiel.Courant.Région", "Nom.Officiel.Région",
-        "Nom.Officiel.Région.Majuscule", "Nom.Officiel.Région.Minuscule",
-        "Code.Iso.3166.3.Zone", "Type", "viewport", "Est.une.CTU",  "SIREN"
-        )
+      std_names_region
       )
   ) {
+    message(names(regions))
+    message(std_names_region)
     stop("error in regions_url")
   } else {
     message("ok regions_url")

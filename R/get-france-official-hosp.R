@@ -25,7 +25,10 @@ getFranceOfficialHosp <- function(
 
   hospital_dep_codebook %>%
     rename(Feature = Colonne) %>%
-    mutate(Feature = c( "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum")) -> france_official_hospital_dep_codebook
+    mutate(Feature = c(
+      "departement", "sex", "date", "hospitalized_now", "icu_now", "returned_home_now", "death_cum",
+      "ssr_usld", "hosp_conv", "others"
+      )) -> france_official_hospital_dep_codebook
 
 
   france_official_hospital_dep <- data.table::as.data.table(

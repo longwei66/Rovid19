@@ -58,6 +58,7 @@ getFranceOfficialEmmergency <- function(
   )
   france_official_emergency_dep %>%
     mutate(date = as.Date(date_de_passage)) %>%
+    mutate(sursaud_cl_age_corona = as.factor(sursaud_cl_age_corona)) %>%
     as.data.table()-> france_official_emergency_dep
 
   france_official_emergency_dep <- data.table::as.data.table(merge(
@@ -95,6 +96,8 @@ getFranceOfficialEmmergency <- function(
     , by.y = "code_insee")
 
   france_official_emergency_reg[ , date := as.Date(date_de_passage)]
+  france_official_emergency_reg[ , sursaud_cl_age_corona := as.factor(sursaud_cl_age_corona)]
+
 
   # Since July 2nd 2020 the data is not updated
   # we compute agregated data from regions instead

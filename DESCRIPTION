@@ -1,6 +1,6 @@
 Package: Rovid19
 Title: A package to explore, visualise and model Covid-19 pandemic
-Version: 0.0.0.9004
+Version: 0.0.0.9005
 Authors@R: 
     person(given = "Barthelemy",
            family = "Longueville",
@@ -11,7 +11,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Suggests: 
     testthat,
     knitr,
